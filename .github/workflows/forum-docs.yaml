@@ -1,0 +1,47 @@
+name: Sync docs to Discourse
+
+on:
+  workflow_run:
+    workflows: ["sunnypilot docs"]
+    types:
+      - completed
+    branches:
+      - docs
+
+concurrency:
+  group: forum-docs-sync
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    name: sync docs to Discourse
+    runs-on: ubuntu-24.04
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.repository == 'sunnypilot/sunnypilot'
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        ref: docs
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.3'
+
+    - name: Restore sync cache
+      uses: actions/cache@v4
+      with:
+        path: .discourse_sync_cache
+        key: discourse-sync-${{ hashFiles('docs_sp/**/*.md') }}
+        restore-keys: |
+          discourse-sync-
+
+    - name: Sync to Discourse
+      env:
+        DISCOURSE_URL: ${{ secrets.DISCOURSE_URL }}
+        DISCOURSE_API_KEY: ${{ secrets.DISCOURSE_API_KEY }}
+        DISCOURSE_API_USER: ${{ secrets.DISCOURSE_API_USER }}
+        DISCOURSE_CATEGORY: ${{ vars.DISCOURSE_DOCS_CATEGORY || 'documentation' }}
+        DOCS_BASE_URL: https://docs.sunnypilot.ai
+      run: ruby docs_sp/tools/sync_docs_discourse.rb --verbose
