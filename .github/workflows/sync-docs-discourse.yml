@@ -67,6 +67,11 @@ jobs:
 
           config = DiscourseConfig.from_env()
           client = DiscourseClient(config)
+
+          def category_id_for(path: str) -> int:
+            top_level = path.split('/')[0]
+            return config.category_mapping.get(top_level, config.category_mapping.get('documentation', 114))
+
           category_id = category_id_for(DOC_PATH)
           print(f'Category ID: {category_id}')
 
