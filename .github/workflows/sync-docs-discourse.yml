@@ -1,0 +1,89 @@
+name: Sync Docs to Discourse
+
+on:
+  push:
+    paths:
+      - "docs_sp/**"
+      - "zensical.toml"
+  pull_request:
+    paths:
+      - "docs_sp/**"
+      - "zensical.toml"
+  workflow_dispatch:
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Smoke test - post one doc to Discourse
+        env:
+          DISCOURSE_URL: ${{ secrets.DISCOURSE_URL }}
+          DISCOURSE_API_KEY: ${{ secrets.DISCOURSE_API_KEY }}
+          DISCOURSE_API_USER: ${{ secrets.DISCOURSE_API_USER }}
+        run: |
+          uv run --python 3.12 -c "
+          import sys
+          sys.path.insert(0, 'docs_sp/tools')
+          from pathlib import Path
+          from converter import convert
+          from discourse_client import DiscourseClient, DiscourseConfig
+
+          DOCS_BASE_URL = 'https://docs.sunnypilot.ai'
+          DOC_PATH = 'getting-started/what-is-sunnypilot.md'
+
+          raw = (Path('docs_sp') / DOC_PATH).read_text()
+          body = convert(raw, file_path=DOC_PATH, docs_base_url=DOCS_BASE_URL)
+
+          # Append sync metadata
+          docs_url = f'{DOCS_BASE_URL}/{DOC_PATH.replace(\".md\", \"/\")}'
+          body = body.rstrip('\n') + f'\n\n---\n:link: [View on docs site]({docs_url})\n\n<!-- docs-sync-id: {DOC_PATH} -->\n'
+
+          # Extract title from front matter or first heading
+          title = None
+          for line in raw.splitlines():
+              s = line.strip()
+              if s.startswith('title:'):
+                  title = s[len('title:'):].strip().strip('\"').strip(\"'\")
+                  break
+              if s.startswith('# '):
+                  title = s[2:].strip()
+                  break
+          title = f'{title or \"What is sunnypilot?\"} - sunnypilot Docs'
+
+          print(f'Title: {title}')
+          print(f'Body: {len(body)} chars')
+
+          config = DiscourseConfig.from_env()
+          client = DiscourseClient(config)
+
+          cat_id = client.get_category_id()
+          if cat_id is None:
+              print(f'ERROR: Category not found on {config.base_url}')
+              sys.exit(1)
+
+          existing = client.find_topic_by_sync_id(DOC_PATH)
+          if existing is not None:
+              topic_id = existing['id']
+              post_id = client.first_post_id(topic_id)
+              if post_id is None:
+                  print(f'ERROR: No first post for topic {topic_id}')
+                  sys.exit(1)
+              result = client.update_post(post_id, body, edit_reason='CI smoke test')
+              if result is None:
+                  print('ERROR: Failed to update post')
+                  sys.exit(1)
+              print(f'Updated: {config.base_url}/t/{topic_id}')
+          else:
+              result = client.create_topic(title=title, raw=body, category_id=cat_id, tags=['docs-auto-sync'])
+              if result is None:
+                  print('ERROR: Failed to create topic')
+                  sys.exit(1)
+              print(f'Created: {config.base_url}/t/{result.get(\"topic_id\", \"?\")}')
+
+          print('Smoke test passed!')
+          "
