@@ -8,13 +8,13 @@ name: Sync Docs to Discourse
 
 on:
   push:
-    paths:
-      - "docs_sp/**"
-      - "zensical.toml"
+#    paths:
+#      - "docs_sp/**"
+#      - "zensical.toml"
   pull_request:
-    paths:
-      - "docs_sp/**"
-      - "zensical.toml"
+#    paths:
+#      - "docs_sp/**"
+#      - "zensical.toml"
   workflow_dispatch:
 
 jobs:
