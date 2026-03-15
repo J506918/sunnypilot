@@ -1126,6 +1126,14 @@
     "title": "Sec Oc Key",
     "description": ""
   },
+  "SettingsCapabilities": {
+    "title": "Settings Capabilities",
+    "description": "Runtime capabilities derived from CarParams for settings UI rules"
+  },
+  "SettingsSchema": {
+    "title": "Settings Schema",
+    "description": "Device-generated settings UI schema with panels and visibility rules"
+  },
   "ShowAdvancedControls": {
     "title": "Show Advanced Controls",
     "description": "Enable to show advanced controls on device"

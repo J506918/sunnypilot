@@ -31,6 +31,8 @@ import cereal.messaging as messaging
 from openpilot.sunnypilot.selfdrive.car.sync_car_list_param import update_car_list_param
 from openpilot.sunnypilot.sunnylink.api import SunnylinkApi
 from openpilot.sunnypilot.sunnylink.utils import sunnylink_need_register, sunnylink_ready, get_param_as_byte, save_param_from_base64_encoded_string
+from openpilot.sunnypilot.sunnylink.capabilities import generate_capabilities_json
+from openpilot.sunnypilot.sunnylink.tools.generate_settings_schema import generate_schema_json
 
 SUNNYLINK_ATHENA_HOST = os.getenv('SUNNYLINK_ATHENA_HOST', 'wss://ws.stg.api.sunnypilot.ai')
 HANDLER_THREADS = int(os.getenv('HANDLER_THREADS', "4"))
@@ -50,6 +52,8 @@ BLOCKED_PARAMS = {
   "GithubSshKeys",   # Direct SSH key injection
   "HasAcceptedTerms",
   "HasAcceptedTermsSP",
+  "SettingsSchema",        # Device-generated, not remotely writable
+  "SettingsCapabilities",  # Device-generated, not remotely writable
 }
 
 
@@ -284,6 +288,26 @@ def startLocalProxy(global_end_event: threading.Event, remote_ws_uri: str, local
   return start_local_proxy_shim(global_end_event, local_port, ws)
 
 
+def _update_settings_schema() -> None:
+  """Generate and write SettingsSchema + SettingsCapabilities params.
+
+  SettingsSchema is static per git commit — generated once at startup.
+  SettingsCapabilities is derived from CarParams and may change when a
+  different car is detected.
+  """
+  try:
+    params.put("SettingsSchema", generate_schema_json())
+    cloudlog.info("sunnylinkd._update_settings_schema: SettingsSchema written")
+  except Exception:
+    cloudlog.exception("sunnylinkd._update_settings_schema.schema.exception")
+
+  try:
+    params.put("SettingsCapabilities", generate_capabilities_json())
+    cloudlog.info("sunnylinkd._update_settings_schema: SettingsCapabilities written")
+  except Exception:
+    cloudlog.exception("sunnylinkd._update_settings_schema.capabilities.exception")
+
+
 def main(exit_event: threading.Event | None = None):
   try:
     set_core_affinity([0, 1, 2, 3])
@@ -299,6 +323,7 @@ def main(exit_event: threading.Event | None = None):
   UploadQueueCache.initialize(upload_queue)
 
   update_car_list_param()
+  _update_settings_schema()
 
   ws_uri = f"{SUNNYLINK_ATHENA_HOST}"
   conn_start = None
