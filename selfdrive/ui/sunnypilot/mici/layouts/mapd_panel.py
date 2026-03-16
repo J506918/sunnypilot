@@ -46,6 +46,8 @@ class MapdInfoPanel(Widget):
     self.next_speed_limit_distance: float = 0.0
     self.road_name: str = ""
     self.current_speed: float = 0.0
+    self.set_speed: float = 0.0
+    self.cruise_enabled: bool = False
 
     self._sign_slide: float = 0.0
 
@@ -82,6 +84,10 @@ class MapdInfoPanel(Widget):
     if sm.updated["carState"]:
       self.current_speed = sm["carState"].vEgo * speed_conv
 
+    if sm.valid["carState"]:
+      self.cruise_enabled = sm["carState"].cruiseState.enabled
+      self.set_speed = sm["carState"].cruiseState.speed * speed_conv
+
   def _render(self, rect: rl.Rectangle) -> None:
     self._update_state()
 
@@ -90,11 +96,18 @@ class MapdInfoPanel(Widget):
     mid_y = rect.y + rect.height / 2
 
     left_x = rect.x + margin
-    unit = tr("km/h") if ui_state.is_metric else tr("MPH")
+
+    if self.cruise_enabled:
+      unit = tr("SET")
+      display_speed = self.set_speed
+    else:
+      unit = tr("km/h") if ui_state.is_metric else tr("MPH")
+      display_speed = self.current_speed
+
     rl.draw_text_ex(self._font_semi_bold, unit, rl.Vector2(left_x, mid_y - 95), 38, 0, COLORS.grey)
 
-    speed_val = str(round(self.current_speed))
-    if self.speed_limit_valid and self.current_speed > self.speed_limit:
+    speed_val = str(round(display_speed))
+    if self.speed_limit_valid and display_speed > self.speed_limit:
       speed_color = COLORS.red
     else:
       speed_color = COLORS.white
