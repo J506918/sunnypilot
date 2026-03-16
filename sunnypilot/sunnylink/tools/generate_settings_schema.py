@@ -339,10 +339,35 @@ def _sunnylink_panel() -> Panel:
 
 
 def _developer_panel() -> Panel:
-  """developer.py: ShowAdvancedControls, EnableGithubRunner, EnableCopyparty, QuickBootToggle."""
+  """Upstream DeveloperLayout + DeveloperLayoutSP combined.
+
+  Upstream (selfdrive/ui/layouts/settings/developer.py):
+    AdbEnabled, SshEnabled, JoystickDebugMode, LongitudinalManeuverMode,
+    AlphaLongitudinalEnabled, ShowDebugInfo
+
+  SP overlay (selfdrive/ui/sunnypilot/layouts/settings/developer.py):
+    ShowAdvancedControls, EnableGithubRunner, EnableCopyparty, QuickBootToggle
+  """
   return Panel(
     id="developer", label="Developer", icon="developer", order=8,
     items=[
+      # ── Upstream items ──
+      SchemaItem(key="AdbEnabled", widget="toggle",
+                 enablement=[offroad_only()]),
+      SchemaItem(key="SshEnabled", widget="toggle"),
+      SchemaItem(key="JoystickDebugMode", widget="toggle",
+                 visibility=[not_rule(cap("is_release", True))],
+                 enablement=[offroad_only()]),
+      SchemaItem(key="LongitudinalManeuverMode", widget="toggle",
+                 visibility=[not_rule(cap("is_release", True))],
+                 enablement=[offroad_only(), cap("has_longitudinal_control", True)]),
+      SchemaItem(key="AlphaLongitudinalEnabled", widget="toggle",
+                 visibility=[all_of(
+                   cap("alpha_long_available", True),
+                   not_rule(cap("is_release", True)),
+                 )]),
+      SchemaItem(key="ShowDebugInfo", widget="toggle"),
+      # ── SP overlay items ──
       SchemaItem(key="ShowAdvancedControls", widget="toggle"),
       SchemaItem(key="EnableGithubRunner", widget="toggle",
                  visibility=[all_of(
