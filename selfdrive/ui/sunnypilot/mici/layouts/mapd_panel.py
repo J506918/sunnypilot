@@ -183,7 +183,6 @@ class MapdInfoPanel(Widget):
     if ui_state.started:
       alert_obj, no_alert = self._alert_renderer.will_render()
       self._alert_alpha_filter.update(0 if no_alert else 1)
-      
       alpha = self._alert_alpha_filter.x
       if alpha > 0.01:
         rl.draw_rectangle(int(rect.x), int(rect.y), int(rect.width), int(rect.height), rl.Color(0, 0, 0, int(150 * alpha)))
