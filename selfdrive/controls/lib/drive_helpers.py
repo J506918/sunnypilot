@@ -63,3 +63,10 @@ def get_curvature_from_plan(yaws, yaw_rates, t_idxs, vego, action_t):
   psi_target = np.interp(action_t, t_idxs, yaws)
   psi_rate = yaw_rates[0]
   return curv_from_psis(psi_target, psi_rate, vego, action_t)
+
+def get_lateral_offset_curvature(path_x, path_y, yaw_rates, t_idxs, vego, action_t, lateral_offset):
+  x_target = max(float(np.interp(action_t, t_idxs, path_x)), MIN_SPEED * action_t)
+  y_target = float(np.interp(action_t, t_idxs, path_y)) + lateral_offset
+  psi_target = float(np.arctan2(y_target, x_target))
+  psi_rate = yaw_rates[0] if len(yaw_rates) else 0.0
+  return curv_from_psis(psi_target, psi_rate, vego, action_t)

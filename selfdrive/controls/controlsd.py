@@ -11,7 +11,7 @@ from openpilot.common.swaglog import cloudlog
 
 from opendbc.car.car_helpers import interfaces
 from opendbc.car.vehicle_model import VehicleModel
-from openpilot.selfdrive.controls.lib.drive_helpers import clip_curvature
+from openpilot.selfdrive.controls.lib.drive_helpers import clip_curvature, get_lateral_offset_curvature
 from openpilot.selfdrive.controls.lib.latcontrol import LatControl
 from openpilot.selfdrive.controls.lib.latcontrol_pid import LatControlPID
 from openpilot.selfdrive.controls.lib.latcontrol_angle import LatControlAngle, STEER_ANGLE_SATURATION_THRESHOLD
@@ -27,6 +27,7 @@ LaneChangeState = log.LaneChangeState
 LaneChangeDirection = log.LaneChangeDirection
 
 ACTUATOR_FIELDS = tuple(car.CarControl.Actuators.schema.fields.keys())
+WINDOW_BUTTON_PATH_OFFSET = 0.5
 
 
 class Controls(ControlsExt):
@@ -136,6 +137,17 @@ class Controls(ControlsExt):
     # Steering PID loop and lateral MPC
     # Reset desired curvature to current to avoid violating the limits on engage
     new_desired_curvature = model_v2.action.desiredCurvature if CC.latActive else self.curvature
+    if CC.latActive:
+      lateral_offset = 0.0
+      if CS.flWindow != CS.frWindow:
+        lateral_offset = WINDOW_BUTTON_PATH_OFFSET if CS.flWindow else -WINDOW_BUTTON_PATH_OFFSET
+
+      if lateral_offset != 0.0 and len(model_v2.position.x) and len(model_v2.position.y) and len(model_v2.orientationRate.z):
+        action_t = self.sm["liveDelay"].lateralDelay + LAT_SMOOTH_SECONDS
+        new_desired_curvature = get_lateral_offset_curvature(model_v2.position.x, model_v2.position.y,
+                                                             model_v2.orientationRate.z, model_v2.position.t,
+                                                             CS.vEgo, action_t, lateral_offset)
+
     self.desired_curvature, curvature_limited = clip_curvature(CS.vEgo, self.desired_curvature, new_desired_curvature, lp.roll)
     lat_delay = self.sm["liveDelay"].lateralDelay + LAT_SMOOTH_SECONDS
 
