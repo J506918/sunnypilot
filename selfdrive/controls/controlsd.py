@@ -140,7 +140,7 @@ class Controls(ControlsExt):
     if CC.latActive:
       lateral_offset = 0.0
       if CS.flWindow != CS.frWindow:
-        lateral_offset = WINDOW_BUTTON_PATH_OFFSET if CS.flWindow else -WINDOW_BUTTON_PATH_OFFSET
+        lateral_offset = -WINDOW_BUTTON_PATH_OFFSET if CS.flWindow else WINDOW_BUTTON_PATH_OFFSET
 
       if lateral_offset != 0.0 and len(model_v2.position.x) and len(model_v2.position.y) and len(model_v2.orientationRate.z):
         action_t = self.sm["liveDelay"].lateralDelay + LAT_SMOOTH_SECONDS
