@@ -27,7 +27,7 @@ LaneChangeState = log.LaneChangeState
 LaneChangeDirection = log.LaneChangeDirection
 
 ACTUATOR_FIELDS = tuple(car.CarControl.Actuators.schema.fields.keys())
-WINDOW_BUTTON_PATH_OFFSET = 0.5
+WINDOW_BUTTON_PATH_OFFSET = 0.2
 
 
 class Controls(ControlsExt):
