@@ -64,11 +64,12 @@ class DesireHelper:
     one_blinker = carstate.leftBlinker != carstate.rightBlinker
     one_button_blinker = carstate.leftButtonBlinker != carstate.rightButtonBlinker
     below_lane_change_speed = carstate.enableButtonBlinker
+    print(below_lane_change_speed)
 
     # Lane turn controller update
-    self.lane_turn_controller.update_lane_turn(blindspot_left=carstate.leftBlindspot, blindspot_right=carstate.rightBlindspot,
-                                               left_blinker=carstate.leftButtonBlinker, right_blinker=carstate.rightButtonBlinker, v_ego=v_ego)
-    self.lane_turn_direction = self.lane_turn_controller.get_turn_direction()
+    # self.lane_turn_controller.update_lane_turn(blindspot_left=carstate.leftBlindspot, blindspot_right=carstate.rightBlindspot,
+                                               # left_blinker=carstate.leftButtonBlinker, right_blinker=carstate.rightButtonBlinker, v_ego=v_ego)
+    self.lane_turn_direction = TurnDirection.none #self.lane_turn_controller.get_turn_direction()
 
     if not lateral_active or self.lane_change_timer > LANE_CHANGE_TIME_MAX or self.alc.lane_change_set_timer == AutoLaneChangeMode.OFF:
       self.lane_change_state = LaneChangeState.off
