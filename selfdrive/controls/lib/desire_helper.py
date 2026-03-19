@@ -64,7 +64,6 @@ class DesireHelper:
     one_blinker = carstate.leftBlinker != carstate.rightBlinker
     one_button_blinker = carstate.leftButtonBlinker != carstate.rightButtonBlinker
     below_lane_change_speed = carstate.enableButtonBlinker
-    print(below_lane_change_speed)
 
     # Lane turn controller update
     # self.lane_turn_controller.update_lane_turn(blindspot_left=carstate.leftBlindspot, blindspot_right=carstate.rightBlindspot,
