@@ -541,38 +541,46 @@
       "icon": "display",
       "order": 3,
       "remote_configurable": true,
-      "items": [
+      "description": "Screen brightness, timeout, and interactivity settings",
+      "sections": [
         {
-          "key": "OnroadScreenOffBrightness",
-          "widget": "multiple_button"
-        },
-        {
-          "key": "OnroadScreenOffTimer",
-          "widget": "multiple_button",
-          "enablement": [
+          "id": "brightness_timeout",
+          "title": "Brightness & Timeout",
+          "description": "Screen dimming and sleep behavior while driving",
+          "items": [
             {
-              "type": "not",
-              "condition": {
-                "type": "any",
-                "conditions": [
-                  {
-                    "type": "param",
-                    "key": "OnroadScreenOffBrightness",
-                    "equals": 0
-                  },
-                  {
-                    "type": "param",
-                    "key": "OnroadScreenOffBrightness",
-                    "equals": 1
+              "key": "OnroadScreenOffBrightness",
+              "widget": "multiple_button"
+            },
+            {
+              "key": "OnroadScreenOffTimer",
+              "widget": "multiple_button",
+              "enablement": [
+                {
+                  "type": "not",
+                  "condition": {
+                    "type": "any",
+                    "conditions": [
+                      {
+                        "type": "param",
+                        "key": "OnroadScreenOffBrightness",
+                        "equals": 0
+                      },
+                      {
+                        "type": "param",
+                        "key": "OnroadScreenOffBrightness",
+                        "equals": 1
+                      }
+                    ]
                   }
-                ]
-              }
+                }
+              ]
+            },
+            {
+              "key": "InteractivityTimeout",
+              "widget": "multiple_button"
             }
           ]
-        },
-        {
-          "key": "InteractivityTimeout",
-          "widget": "multiple_button"
         }
       ]
     },
@@ -672,34 +680,42 @@
       "icon": "toggles",
       "order": 5,
       "remote_configurable": true,
-      "items": [
+      "description": "Core openpilot feature toggles",
+      "sections": [
         {
-          "key": "OpenpilotEnabledToggle",
-          "widget": "toggle",
-          "enablement": [
+          "id": "core_toggles",
+          "title": "Core Toggles",
+          "description": "Primary driving assist and safety features",
+          "items": [
             {
-              "type": "offroad_only"
+              "key": "OpenpilotEnabledToggle",
+              "widget": "toggle",
+              "enablement": [
+                {
+                  "type": "offroad_only"
+                }
+              ]
+            },
+            {
+              "key": "ExperimentalMode",
+              "widget": "toggle",
+              "enablement": [
+                {
+                  "type": "capability",
+                  "field": "has_longitudinal_control",
+                  "equals": true
+                }
+              ]
+            },
+            {
+              "key": "IsLdwEnabled",
+              "widget": "toggle"
+            },
+            {
+              "key": "AlwaysOnDM",
+              "widget": "toggle"
             }
           ]
-        },
-        {
-          "key": "ExperimentalMode",
-          "widget": "toggle",
-          "enablement": [
-            {
-              "type": "capability",
-              "field": "has_longitudinal_control",
-              "equals": true
-            }
-          ]
-        },
-        {
-          "key": "IsLdwEnabled",
-          "widget": "toggle"
-        },
-        {
-          "key": "AlwaysOnDM",
-          "widget": "toggle"
         }
       ]
     },
@@ -785,20 +801,28 @@
       "icon": "software",
       "order": 7,
       "remote_configurable": true,
-      "items": [
+      "description": "Software update preferences",
+      "sections": [
         {
-          "key": "DisableUpdates",
-          "widget": "toggle",
-          "visibility": [
+          "id": "updates",
+          "title": "Updates",
+          "description": "Control automatic software updates",
+          "items": [
             {
-              "type": "param",
-              "key": "ShowAdvancedControls",
-              "equals": true
-            }
-          ],
-          "enablement": [
-            {
-              "type": "offroad_only"
+              "key": "DisableUpdates",
+              "widget": "toggle",
+              "visibility": [
+                {
+                  "type": "param",
+                  "key": "ShowAdvancedControls",
+                  "equals": true
+                }
+              ],
+              "enablement": [
+                {
+                  "type": "offroad_only"
+                }
+              ]
             }
           ]
         }
@@ -810,24 +834,32 @@
       "icon": "sunnylink",
       "order": 8,
       "remote_configurable": false,
-      "items": [
+      "description": "sunnylink cloud connection and data sharing",
+      "sections": [
         {
-          "key": "SunnylinkEnabled",
-          "widget": "toggle",
-          "enablement": [
+          "id": "sunnylink_connection",
+          "title": "sunnylink Connection",
+          "description": "Enable and configure sunnylink cloud services",
+          "items": [
             {
-              "type": "offroad_only"
-            }
-          ]
-        },
-        {
-          "key": "EnableSunnylinkUploader",
-          "widget": "toggle",
-          "enablement": [
-            {
-              "type": "param",
               "key": "SunnylinkEnabled",
-              "equals": true
+              "widget": "toggle",
+              "enablement": [
+                {
+                  "type": "offroad_only"
+                }
+              ]
+            },
+            {
+              "key": "EnableSunnylinkUploader",
+              "widget": "toggle",
+              "enablement": [
+                {
+                  "type": "param",
+                  "key": "SunnylinkEnabled",
+                  "equals": true
+                }
+              ]
             }
           ]
         }
@@ -1025,63 +1057,78 @@
       "icon": "models",
       "order": 10,
       "remote_configurable": false,
-      "items": [
+      "description": "Driving model behavior and camera calibration",
+      "sections": [
         {
-          "key": "LaneTurnDesire",
-          "widget": "toggle"
-        },
-        {
-          "key": "LaneTurnValue",
-          "widget": "option",
-          "visibility": [
+          "id": "model_behavior",
+          "title": "Model Behavior",
+          "description": "Lane desire and lead-vehicle awareness tuning",
+          "items": [
             {
-              "type": "all",
-              "conditions": [
+              "key": "LaneTurnDesire",
+              "widget": "toggle"
+            },
+            {
+              "key": "LaneTurnValue",
+              "widget": "option",
+              "visibility": [
                 {
-                  "type": "param",
-                  "key": "LaneTurnDesire",
-                  "equals": true
-                },
+                  "type": "all",
+                  "conditions": [
+                    {
+                      "type": "param",
+                      "key": "LaneTurnDesire",
+                      "equals": true
+                    },
+                    {
+                      "type": "param",
+                      "key": "ShowAdvancedControls",
+                      "equals": true
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "key": "LagdToggle",
+              "widget": "toggle"
+            },
+            {
+              "key": "LagdToggleDelay",
+              "widget": "option",
+              "visibility": [
                 {
-                  "type": "param",
-                  "key": "ShowAdvancedControls",
-                  "equals": true
+                  "type": "all",
+                  "conditions": [
+                    {
+                      "type": "not",
+                      "condition": {
+                        "type": "param",
+                        "key": "LagdToggle",
+                        "equals": true
+                      }
+                    },
+                    {
+                      "type": "param",
+                      "key": "ShowAdvancedControls",
+                      "equals": true
+                    }
+                  ]
                 }
               ]
             }
           ]
         },
         {
-          "key": "LagdToggle",
-          "widget": "toggle"
-        },
-        {
-          "key": "LagdToggleDelay",
-          "widget": "option",
-          "visibility": [
+          "id": "camera",
+          "title": "Camera",
+          "description": "Camera position and calibration",
+          "items": [
             {
-              "type": "all",
-              "conditions": [
-                {
-                  "type": "not",
-                  "condition": {
-                    "type": "param",
-                    "key": "LagdToggle",
-                    "equals": true
-                  }
-                },
-                {
-                  "type": "param",
-                  "key": "ShowAdvancedControls",
-                  "equals": true
-                }
-              ]
+              "key": "CameraOffset",
+              "widget": "option"
             }
           ]
-        },
-        {
-          "key": "CameraOffset",
-          "widget": "option"
         }
       ]
     }
