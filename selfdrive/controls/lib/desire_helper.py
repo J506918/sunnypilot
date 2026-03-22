@@ -55,19 +55,19 @@ class DesireHelper:
 
   @staticmethod
   def get_lane_change_direction(CS):
-    return LaneChangeDirection.left if CS.rlWindow else LaneChangeDirection.right
+    return LaneChangeDirection.left if CS.leftButtonBlinker else LaneChangeDirection.right
 
   def update(self, carstate, lateral_active, lane_change_prob):
     self.alc.update_params()
     self.lane_turn_controller.update_params()
     v_ego = carstate.vEgo
     one_blinker = carstate.leftBlinker != carstate.rightBlinker
-    one_button_blinker = carstate.rlWindow != carstate.rrWindow
+    one_button_blinker = carstate.leftButtonBlinker != carstate.rightButtonBlinker and carstate.enableButtonBlinker
     below_lane_change_speed = v_ego < LANE_CHANGE_SPEED_MIN
 
     # Lane turn controller update
     self.lane_turn_controller.update_lane_turn(blindspot_left=carstate.leftBlindspot, blindspot_right=carstate.rightBlindspot,
-                                               left_blinker=carstate.rlWindow, right_blinker=carstate.rrWindow, v_ego=v_ego)
+                                               left_blinker=carstate.leftButtonBlinker, right_blinker=carstate.rightButtonBlinker, v_ego=v_ego)
     self.lane_turn_direction = self.lane_turn_controller.get_turn_direction()
 
     if not lateral_active or self.lane_change_timer > LANE_CHANGE_TIME_MAX or self.alc.lane_change_set_timer == AutoLaneChangeMode.OFF:
@@ -90,6 +90,9 @@ class DesireHelper:
                          ((carstate.steeringTorque > 0 and self.lane_change_direction == LaneChangeDirection.left) or
                           (carstate.steeringTorque < 0 and self.lane_change_direction == LaneChangeDirection.right))
 
+        button_applied = (carstate.leftButtonBlinkerNudge and self.lane_change_direction == LaneChangeDirection.left) or
+                          (carstate.rightButtonBlinkerNudge and self.lane_change_direction == LaneChangeDirection.right)
+
         blindspot_detected = ((carstate.leftBlindspot and self.lane_change_direction == LaneChangeDirection.left) or
                               (carstate.rightBlindspot and self.lane_change_direction == LaneChangeDirection.right))
 
@@ -98,7 +101,7 @@ class DesireHelper:
         if not one_button_blinker or below_lane_change_speed:
           self.lane_change_state = LaneChangeState.off
           self.lane_change_direction = LaneChangeDirection.none
-        elif (torque_applied or self.alc.auto_lane_change_allowed) and not blindspot_detected:
+        elif (torque_applied or button_applied or self.alc.auto_lane_change_allowed) and not blindspot_detected:
           self.lane_change_state = LaneChangeState.laneChangeStarting
 
       # LaneChangeState.laneChangeStarting
