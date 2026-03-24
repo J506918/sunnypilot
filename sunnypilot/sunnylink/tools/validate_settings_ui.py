@@ -73,10 +73,6 @@ class ValidationResult:
       print("Result: FAIL")
 
 
-# ---------------------------------------------------------------------------
-# Rule validation helpers
-# ---------------------------------------------------------------------------
-
 def validate_rule(rule: dict, path: str, result: ValidationResult,
                   capability_fields: tuple[str, ...]) -> bool:
   """Validate a single rule dict. Returns True if valid."""
@@ -170,10 +166,6 @@ def walk_rules_flat(rules: list[dict]) -> list[dict]:
   return flat
 
 
-# ---------------------------------------------------------------------------
-# Item / panel traversal
-# ---------------------------------------------------------------------------
-
 def collect_all_items(data: dict) -> list[tuple[str, dict]]:
   """Collect all items with their location path from the schema.
 
@@ -244,10 +236,6 @@ def collect_panel_keys(panel: dict) -> set[str]:
 
   return keys
 
-
-# ---------------------------------------------------------------------------
-# Validation checks
-# ---------------------------------------------------------------------------
 
 def check_json_parseable(path: str, result: ValidationResult) -> dict | None:
   """Check 1: JSON parseable."""
@@ -496,10 +484,6 @@ def check_vehicle_brands(data: dict, result: ValidationResult) -> None:
   else:
     result.ok("vehicle brands")
 
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 
 def validate(path: str) -> bool:
   """Run all validation checks on the given settings_ui.json file.

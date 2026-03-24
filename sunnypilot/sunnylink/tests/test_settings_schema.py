@@ -18,10 +18,6 @@ from openpilot.sunnypilot.sunnylink.tools.generate_settings_schema import (
 from openpilot.sunnypilot.sunnylink.capabilities import CAPABILITY_FIELDS
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 VALID_WIDGET_TYPES = {"toggle", "option", "multiple_button", "button", "info"}
 VALID_RULE_TYPES = {"offroad_only", "capability", "param", "param_compare", "not", "any", "all"}
 VALID_COMPARE_OPS = {">", "<", ">=", "<="}
@@ -38,10 +34,6 @@ def all_param_keys():
   """All keys registered in the device param store."""
   return {k.decode("utf-8") for k in Params().all_keys()}
 
-
-# ---------------------------------------------------------------------------
-# Structure validation
-# ---------------------------------------------------------------------------
 
 class TestSchemaStructure:
   def test_schema_is_valid_json(self):
@@ -114,10 +106,6 @@ class TestSchemaStructure:
           seen[sub_key] = panel["id"]
 
 
-# ---------------------------------------------------------------------------
-# Coverage validation
-# ---------------------------------------------------------------------------
-
 class TestSchemaCoverage:
   def test_all_schema_keys_exist_in_params(self, schema, all_param_keys):
     """Every key referenced in the schema must exist in Params().all_keys()."""
@@ -136,10 +124,6 @@ class TestSchemaCoverage:
     """Schema capability_fields must match the CAPABILITY_FIELDS constant."""
     assert set(schema["capability_fields"]) == set(CAPABILITY_FIELDS)
 
-
-# ---------------------------------------------------------------------------
-# Rule validation
-# ---------------------------------------------------------------------------
 
 class TestRuleWellFormedness:
   def _validate_rule(self, rule: dict, context: str = ""):
@@ -213,10 +197,6 @@ class TestRuleWellFormedness:
         _check_self_ref(item, "enablement")
 
 
-# ---------------------------------------------------------------------------
-# Regression anchors
-# ---------------------------------------------------------------------------
-
 class TestKnownPanels:
   def test_expected_panels_exist(self, schema):
     panel_ids = {p["id"] for p in schema["panels"]}
@@ -264,10 +244,6 @@ class TestKnownVehicleSettings:
     assert "SubaruStopAndGo" in keys
     assert "SubaruStopAndGoManualParkingBrake" in keys
 
-
-# ---------------------------------------------------------------------------
-# Item completeness (metadata is inline in settings_ui.json)
-# ---------------------------------------------------------------------------
 
 class TestItemCompleteness:
   def _collect_all_items(self, schema):

@@ -160,14 +160,12 @@ class UIStateSP:
     if ui_state_ref.engaged:
       return  # Event system handles the onroad banner
 
-    # Auto-apply mode: cycle immediately without prompting
     if self.params.get_bool("AutoApplyRemoteOnroadCycle"):
       self.params.put_bool("OnroadCycleRequested", True)
       self.params.put_bool("OnroadCyclePendingRemote", False)
       self._remote_cycle_pending = False
       return
 
-    # Prompt mode: show confirmation dialog
     self._remote_cycle_dialog_shown = True
 
     def _on_result(result):
