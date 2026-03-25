@@ -1370,24 +1370,7 @@
               "key": "OnroadUploads",
               "widget": "toggle",
               "title": "Onroad Uploads"
-            }
-          ]
-        },
-        {
-          "id": "language",
-          "title": "Language",
-          "items": [
-            {
-              "key": "LanguageSetting",
-              "widget": "info",
-              "title": "Language"
-            }
-          ]
-        },
-        {
-          "id": "safety",
-          "title": "Safety & Timeouts",
-          "items": [
+            },
             {
               "key": "MaxTimeOffroad",
               "widget": "option",
@@ -1443,6 +1426,17 @@
                   "label": "30h (Default)"
                 }
               ]
+            }
+          ]
+        },
+        {
+          "id": "language",
+          "title": "Language",
+          "items": [
+            {
+              "key": "LanguageSetting",
+              "widget": "info",
+              "title": "Language"
             }
           ]
         }
