@@ -6,7 +6,7 @@ See the LICENSE.md file in the root directory for more details.
 """
 from enum import Enum
 
-from cereal import messaging, log, custom
+from cereal import messaging, log, car, custom
 from openpilot.common.params import Params
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.display import OnroadBrightness
 from openpilot.sunnypilot.sunnylink.sunnylink_state import SunnylinkState
@@ -132,6 +132,8 @@ class UIStateSP:
     if CP_SP_bytes is not None:
       self.CP_SP = messaging.log_from_bytes(CP_SP_bytes, custom.CarParamsSP)
       self.has_icbm = self.CP_SP.intelligentCruiseButtonManagementAvailable and self.params.get_bool("IntelligentCruiseButtonManagement")
+
+    self._enforce_sp_constraints()
     self.active_bundle = self.params.get("ModelManager_ActiveBundle")
     self.blindspot = self.params.get_bool("BlindSpot")
     self.chevron_metrics = self.params.get("ChevronInfo")
@@ -151,6 +153,48 @@ class UIStateSP:
     self.turn_signals = self.params.get_bool("ShowTurnSignals")
     self.boot_offroad_mode = self.params.get("DeviceBootMode", return_default=True)
     self._remote_cycle_pending = self.params.get_bool("OnroadCyclePendingRemote")
+
+  def _enforce_sp_constraints(self) -> None:
+    has_long = self.has_longitudinal_control if hasattr(self, 'has_longitudinal_control') else False
+    has_icbm = self.has_icbm
+    CP = self.CP if hasattr(self, 'CP') else None
+
+    if CP is not None:
+      # Angle steering: no torque-based lateral controls
+      if CP.steerControlType == car.CarParams.SteerControlType.angle:
+        self.params.remove("EnforceTorqueControl")
+        self.params.remove("NeuralNetworkLateralControl")
+
+      # Alpha longitudinal: clear if not available or on release branch
+      if not CP.alphaLongitudinalAvailable or self.params.get_bool("IsReleaseBranch"):
+        self.params.remove("AlphaLongitudinalEnabled")
+
+      # BSM not available: clear BSM-dependent settings
+      if not CP.enableBsm:
+        self.params.remove("AutoLaneChangeBsmDelay")
+    else:
+      # No CarParams: clear all car-dependent params as safety default
+      self.params.remove("EnforceTorqueControl")
+      self.params.remove("NeuralNetworkLateralControl")
+      self.params.remove("AlphaLongitudinalEnabled")
+
+    # No longitudinal control: no experimental mode
+    if not has_long:
+      self.params.remove("ExperimentalMode")
+
+    # ICBM: clear if not available or if full longitudinal control is active
+    if self.CP_SP is not None:
+      if not self.CP_SP.intelligentCruiseButtonManagementAvailable or has_long:
+        self.params.remove("IntelligentCruiseButtonManagement")
+    else:
+      self.params.remove("IntelligentCruiseButtonManagement")
+
+    # Cruise features requiring longitudinal or ICBM
+    if not (has_long or has_icbm):
+      self.params.remove("CustomAccIncrementsEnabled")
+      self.params.remove("DynamicExperimentalControl")
+      self.params.remove("SmartCruiseControlVision")
+      self.params.remove("SmartCruiseControlMap")
 
   def check_remote_cycle_pending(self, ui_state_ref) -> None:
     """Check and handle pending remote onroad cycle when not engaged."""
