@@ -1498,6 +1498,7 @@
             {
               "key": "AdbEnabled",
               "widget": "toggle",
+              "blocked": true,
               "enablement": [
                 {
                   "type": "offroad_only"

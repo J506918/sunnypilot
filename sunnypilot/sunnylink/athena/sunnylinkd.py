@@ -45,6 +45,7 @@ params = Params()
 
 # Parameters that should never be remotely modified
 BLOCKED_PARAMS = {
+  "AdbEnabled",
   "AutoApplyRemoteOnroadCycle",  # Safety gate: device-only toggle
   "CompletedSunnylinkConsentVersion",
   "CompletedTrainingVersion",
