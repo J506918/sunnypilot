@@ -480,6 +480,9 @@
               ],
               "enablement": [
                 {
+                  "type": "offroad_only"
+                },
+                {
                   "type": "capability",
                   "field": "has_longitudinal_control",
                   "equals": true
@@ -497,6 +500,13 @@
             {
               "key": "LongitudinalPersonality",
               "widget": "multiple_button",
+              "enablement": [
+                {
+                  "type": "capability",
+                  "field": "has_longitudinal_control",
+                  "equals": true
+                }
+              ],
               "title": "Driving Personality",
               "description": "Standard is recommended. In aggressive mode, sunnypilot will follow lead cars closer and be more aggressive with the gas and brake. In relaxed mode sunnypilot will stay further away from lead cars. On supported cars, you can cycle through these personalities with your steering wheel distance button.",
               "options": [
@@ -773,6 +783,9 @@
                   ]
                 }
               ],
+              "enablement": [
+                { "type": "offroad_only" }
+              ],
               "title": "Smart Cruise Control - Vision",
               "description": "Use vision path predictions to estimate the appropriate speed to drive through turns ahead."
             },
@@ -795,6 +808,9 @@
                     }
                   ]
                 }
+              ],
+              "enablement": [
+                { "type": "offroad_only" }
               ],
               "title": "Smart Cruise Control - Map",
               "description": "Use map data to estimate the appropriate speed to drive through turns ahead."
@@ -1563,6 +1579,9 @@
                     }
                   ]
                 }
+              ],
+              "enablement": [
+                { "type": "offroad_only" }
               ],
               "title": "sunnypilot Longitudinal Control (Alpha)",
               "description": "WARNING: sunnypilot longitudinal control is in alpha for this car and will disable Automatic Emergency Braking (AEB). On this car, sunnypilot defaults to the car's built-in ACC instead of sunnypilot's longitudinal control. Enable this to switch to sunnypilot longitudinal control. Enabling Experimental mode is recommended when enabling sunnypilot longitudinal control alpha. Changing this setting will restart sunnypilot if the car is powered on."
