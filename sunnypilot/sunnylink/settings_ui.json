@@ -558,7 +558,7 @@
                   "equals": true
                 }
               ],
-              "title": "Enable Dynamic Experimental Control",
+              "title": "Dynamic Experimental Control",
               "description": "Enable toggle to allow the model to determine when to use sunnypilot ACC or sunnypilot End to End Longitudinal."
             },
             {
@@ -1311,7 +1311,7 @@
             {
               "key": "StandstillTimer",
               "widget": "toggle",
-              "title": "Enable Standstill Timer",
+              "title": "Standstill Timer",
               "description": "Show a timer on the HUD when the car is at a standstill."
             },
             {
@@ -1419,7 +1419,7 @@
             {
               "key": "RainbowMode",
               "widget": "toggle",
-              "title": "Enable Tesla Rainbow Mode",
+              "title": "Tesla Rainbow Mode",
               "description": "A beautiful rainbow effect on the path the model wants to take. It does not affect driving in any way."
             }
           ]
@@ -1637,47 +1637,6 @@
               ],
               "title": "Disable Updates",
               "description": "When enabled, automatic software updates will be off. This requires a reboot to take effect."
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "sunnylink",
-      "label": "sunnylink",
-      "icon": "sunnylink",
-      "order": 8,
-      "remote_configurable": false,
-      "description": "sunnylink cloud connection and data sharing",
-      "sections": [
-        {
-          "id": "sunnylink_connection",
-          "title": "sunnylink Connection",
-          "description": "Enable and configure sunnylink cloud services",
-          "items": [
-            {
-              "key": "SunnylinkEnabled",
-              "widget": "toggle",
-              "enablement": [
-                {
-                  "type": "offroad_only"
-                }
-              ],
-              "title": "Enable sunnylink",
-              "description": "This is the master switch, it will allow you to cutoff any sunnylink requests should you want to do that."
-            },
-            {
-              "key": "EnableSunnylinkUploader",
-              "widget": "toggle",
-              "enablement": [
-                {
-                  "type": "param",
-                  "key": "SunnylinkEnabled",
-                  "equals": true
-                }
-              ],
-              "title": "Enable sunnylink uploader (infrastructure test)",
-              "description": "Enable sunnylink uploader to allow sunnypilot to upload your driving data to sunnypilot servers. Only for highest tiers, and does NOT bring ANY benefit to you yet. We are just testing data volume."
             }
           ]
         }
