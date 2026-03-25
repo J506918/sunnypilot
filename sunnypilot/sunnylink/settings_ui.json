@@ -80,12 +80,27 @@
                           "condition": {
                             "type": "any",
                             "conditions": [
-                              { "type": "capability", "field": "brand", "equals": "rivian" },
+                              {
+                                "type": "capability",
+                                "field": "brand",
+                                "equals": "rivian"
+                              },
                               {
                                 "type": "all",
                                 "conditions": [
-                                  { "type": "capability", "field": "brand", "equals": "tesla" },
-                                  { "type": "not", "condition": { "type": "capability", "field": "tesla_has_vehicle_bus", "equals": true } }
+                                  {
+                                    "type": "capability",
+                                    "field": "brand",
+                                    "equals": "tesla"
+                                  },
+                                  {
+                                    "type": "not",
+                                    "condition": {
+                                      "type": "capability",
+                                      "field": "tesla_has_vehicle_bus",
+                                      "equals": true
+                                    }
+                                  }
                                 ]
                               }
                             ]
@@ -102,12 +117,27 @@
                           "condition": {
                             "type": "any",
                             "conditions": [
-                              { "type": "capability", "field": "brand", "equals": "rivian" },
+                              {
+                                "type": "capability",
+                                "field": "brand",
+                                "equals": "rivian"
+                              },
                               {
                                 "type": "all",
                                 "conditions": [
-                                  { "type": "capability", "field": "brand", "equals": "tesla" },
-                                  { "type": "not", "condition": { "type": "capability", "field": "tesla_has_vehicle_bus", "equals": true } }
+                                  {
+                                    "type": "capability",
+                                    "field": "brand",
+                                    "equals": "tesla"
+                                  },
+                                  {
+                                    "type": "not",
+                                    "condition": {
+                                      "type": "capability",
+                                      "field": "tesla_has_vehicle_bus",
+                                      "equals": true
+                                    }
+                                  }
                                 ]
                               }
                             ]
@@ -137,35 +167,38 @@
                 {
                   "key": "BlinkerMinLateralControlSpeed",
                   "widget": "option",
-                  "visibility": [
-                    {
-                      "type": "param",
-                      "key": "BlinkerPauseLateralControl",
-                      "equals": true
-                    }
-                  ],
                   "title": "Minimum Speed to Pause Lateral Control",
                   "min": 0,
                   "max": 255,
                   "step": 5,
-                  "unit": {"metric": "km/h", "imperial": "mph"}
-                },
-                {
-                  "key": "BlinkerLateralReengageDelay",
-                  "widget": "option",
-                  "visibility": [
+                  "unit": {
+                    "metric": "km/h",
+                    "imperial": "mph"
+                  },
+                  "enablement": [
                     {
                       "type": "param",
                       "key": "BlinkerPauseLateralControl",
                       "equals": true
                     }
-                  ],
+                  ]
+                },
+                {
+                  "key": "BlinkerLateralReengageDelay",
+                  "widget": "option",
                   "title": "Post-Blinker Delay",
                   "description": "Delay before lateral control resumes after the turn signal ends.",
                   "min": 0,
                   "max": 10,
                   "step": 1,
-                  "unit": "second"
+                  "unit": "second",
+                  "enablement": [
+                    {
+                      "type": "param",
+                      "key": "BlinkerPauseLateralControl",
+                      "equals": true
+                    }
+                  ]
                 }
               ],
               "title": "Pause Lateral Control with Blinker",
@@ -272,16 +305,14 @@
                 {
                   "key": "LiveTorqueParamsRelaxedToggle",
                   "widget": "toggle",
-                  "visibility": [
+                  "enablement": [
+                    {
+                      "type": "offroad_only"
+                    },
                     {
                       "type": "param",
                       "key": "LiveTorqueParamsToggle",
                       "equals": true
-                    }
-                  ],
-                  "enablement": [
-                    {
-                      "type": "offroad_only"
                     }
                   ],
                   "title": "Less Restrict Settings for Self-Tune (Beta)",
@@ -301,16 +332,14 @@
                 {
                   "key": "TorqueParamsOverrideEnabled",
                   "widget": "toggle",
-                  "visibility": [
+                  "enablement": [
+                    {
+                      "type": "offroad_only"
+                    },
                     {
                       "type": "param",
                       "key": "CustomTorqueParams",
                       "equals": true
-                    }
-                  ],
-                  "enablement": [
-                    {
-                      "type": "offroad_only"
                     }
                   ],
                   "title": "Manual Real-Time Tuning",
@@ -319,27 +348,53 @@
                 {
                   "key": "TorqueParamsOverrideLatAccelFactor",
                   "widget": "option",
-                  "visibility": [
+                  "enablement": [
                     {
                       "type": "param",
                       "key": "CustomTorqueParams",
                       "equals": true
+                    },
+                    {
+                      "type": "any",
+                      "conditions": [
+                        {
+                          "type": "param",
+                          "key": "TorqueParamsOverrideEnabled",
+                          "equals": true
+                        },
+                        {
+                          "type": "offroad_only"
+                        }
+                      ]
                     }
                   ],
                   "title": "Lateral Acceleration Factor",
                   "min": 0.1,
                   "max": 5.0,
                   "step": 0.1,
-                  "unit": "m/s\u00b2"
+                  "unit": "m/s²"
                 },
                 {
                   "key": "TorqueParamsOverrideFriction",
                   "widget": "option",
-                  "visibility": [
+                  "enablement": [
                     {
                       "type": "param",
                       "key": "CustomTorqueParams",
                       "equals": true
+                    },
+                    {
+                      "type": "any",
+                      "conditions": [
+                        {
+                          "type": "param",
+                          "key": "TorqueParamsOverrideEnabled",
+                          "equals": true
+                        },
+                        {
+                          "type": "offroad_only"
+                        }
+                      ]
                     }
                   ],
                   "title": "Friction",
@@ -654,32 +709,32 @@
                 {
                   "key": "CustomAccShortPressIncrement",
                   "widget": "option",
-                  "visibility": [
+                  "title": "Short Press Increment",
+                  "min": 1,
+                  "max": 10,
+                  "step": 1,
+                  "enablement": [
                     {
                       "type": "param",
                       "key": "CustomAccIncrementsEnabled",
                       "equals": true
                     }
-                  ],
-                  "title": "Short Press Increment",
-                  "min": 1,
-                  "max": 10,
-                  "step": 1
+                  ]
                 },
                 {
                   "key": "CustomAccLongPressIncrement",
                   "widget": "option",
-                  "visibility": [
+                  "title": "Long Press Increment",
+                  "min": 1,
+                  "max": 10,
+                  "step": 1,
+                  "enablement": [
                     {
                       "type": "param",
                       "key": "CustomAccIncrementsEnabled",
                       "equals": true
                     }
-                  ],
-                  "title": "Long Press Increment",
-                  "min": 1,
-                  "max": 10,
-                  "step": 1
+                  ]
                 }
               ]
             }
@@ -720,21 +775,41 @@
                         {
                           "type": "any",
                           "conditions": [
-                            { "type": "capability", "field": "has_longitudinal_control", "equals": true },
-                            { "type": "capability", "field": "has_icbm", "equals": true }
+                            {
+                              "type": "capability",
+                              "field": "has_longitudinal_control",
+                              "equals": true
+                            },
+                            {
+                              "type": "capability",
+                              "field": "has_icbm",
+                              "equals": true
+                            }
                           ]
                         },
                         {
                           "type": "not",
-                          "condition": { "type": "capability", "field": "brand", "equals": "rivian" }
+                          "condition": {
+                            "type": "capability",
+                            "field": "brand",
+                            "equals": "rivian"
+                          }
                         },
                         {
                           "type": "not",
                           "condition": {
                             "type": "all",
                             "conditions": [
-                              { "type": "capability", "field": "brand", "equals": "tesla" },
-                              { "type": "capability", "field": "is_sp_release", "equals": true }
+                              {
+                                "type": "capability",
+                                "field": "brand",
+                                "equals": "tesla"
+                              },
+                              {
+                                "type": "capability",
+                                "field": "is_sp_release",
+                                "equals": true
+                              }
                             ]
                           }
                         }
@@ -745,14 +820,6 @@
                 {
                   "key": "SpeedLimitPolicy",
                   "widget": "multiple_button",
-                  "visibility": [
-                    {
-                      "type": "param_compare",
-                      "key": "SpeedLimitMode",
-                      "op": ">",
-                      "value": 0
-                    }
-                  ],
                   "title": "Speed Limit Source",
                   "options": [
                     {
@@ -775,19 +842,19 @@
                       "value": 4,
                       "label": "Combined"
                     }
-                  ]
-                },
-                {
-                  "key": "SpeedLimitOffsetType",
-                  "widget": "multiple_button",
-                  "visibility": [
+                  ],
+                  "enablement": [
                     {
                       "type": "param_compare",
                       "key": "SpeedLimitMode",
                       "op": ">",
                       "value": 0
                     }
-                  ],
+                  ]
+                },
+                {
+                  "key": "SpeedLimitOffsetType",
+                  "widget": "multiple_button",
                   "title": "Speed Limit Offset Type",
                   "options": [
                     {
@@ -802,12 +869,28 @@
                       "value": 2,
                       "label": "Percentage"
                     }
+                  ],
+                  "enablement": [
+                    {
+                      "type": "param_compare",
+                      "key": "SpeedLimitMode",
+                      "op": ">",
+                      "value": 0
+                    }
                   ]
                 },
                 {
                   "key": "SpeedLimitValueOffset",
                   "widget": "option",
-                  "visibility": [
+                  "title": "Speed Limit Offset Value",
+                  "min": -30,
+                  "max": 30,
+                  "step": 1,
+                  "unit": {
+                    "metric": "km/h",
+                    "imperial": "mph"
+                  },
+                  "enablement": [
                     {
                       "type": "all",
                       "conditions": [
@@ -825,12 +908,7 @@
                         }
                       ]
                     }
-                  ],
-                  "title": "Speed Limit Offset Value",
-                  "min": -30,
-                  "max": 30,
-                  "step": 1,
-                  "unit": {"metric": "km/h", "imperial": "mph"}
+                  ]
                 }
               ]
             }
@@ -844,8 +922,16 @@
             {
               "type": "any",
               "conditions": [
-                { "type": "capability", "field": "has_longitudinal_control", "equals": true },
-                { "type": "capability", "field": "has_icbm", "equals": true }
+                {
+                  "type": "capability",
+                  "field": "has_longitudinal_control",
+                  "equals": true
+                },
+                {
+                  "type": "capability",
+                  "field": "has_icbm",
+                  "equals": true
+                }
               ]
             }
           ],
@@ -874,8 +960,16 @@
                 {
                   "type": "any",
                   "conditions": [
-                    { "type": "capability", "field": "has_longitudinal_control", "equals": true },
-                    { "type": "capability", "field": "has_icbm", "equals": true }
+                    {
+                      "type": "capability",
+                      "field": "has_longitudinal_control",
+                      "equals": true
+                    },
+                    {
+                      "type": "capability",
+                      "field": "has_icbm",
+                      "equals": true
+                    }
                   ]
                 }
               ],
@@ -906,8 +1000,16 @@
                 {
                   "type": "any",
                   "conditions": [
-                    { "type": "capability", "field": "has_longitudinal_control", "equals": true },
-                    { "type": "capability", "field": "has_icbm", "equals": true }
+                    {
+                      "type": "capability",
+                      "field": "has_longitudinal_control",
+                      "equals": true
+                    },
+                    {
+                      "type": "capability",
+                      "field": "has_icbm",
+                      "equals": true
+                    }
                   ]
                 }
               ],
@@ -1515,16 +1617,14 @@
             {
               "key": "DisableUpdates",
               "widget": "toggle",
-              "visibility": [
+              "enablement": [
+                {
+                  "type": "offroad_only"
+                },
                 {
                   "type": "param",
                   "key": "ShowAdvancedControls",
                   "equals": true
-                }
-              ],
-              "enablement": [
-                {
-                  "type": "offroad_only"
                 }
               ],
               "title": "Disable Updates",
@@ -1676,7 +1776,9 @@
                 }
               ],
               "enablement": [
-                { "type": "offroad_only" }
+                {
+                  "type": "offroad_only"
+                }
               ],
               "title": "sunnypilot Longitudinal Control (Alpha)",
               "description": "WARNING: sunnypilot longitudinal control is in alpha for this car and will disable Automatic Emergency Braking (AEB). On this car, sunnypilot defaults to the car's built-in ACC instead of sunnypilot's longitudinal control. Enable this to switch to sunnypilot longitudinal control. Enabling Experimental mode is recommended when enabling sunnypilot longitudinal control alpha. Changing this setting will restart sunnypilot if the car is powered on."
@@ -1702,7 +1804,9 @@
             {
               "key": "EnableGithubRunner",
               "widget": "toggle",
-              "visibility": [
+              "title": "GitHub Runner Service",
+              "description": "Enables or disables the GitHub runner service.",
+              "enablement": [
                 {
                   "type": "all",
                   "conditions": [
@@ -1721,27 +1825,30 @@
                     }
                   ]
                 }
-              ],
-              "title": "GitHub Runner Service",
-              "description": "Enables or disables the GitHub runner service."
+              ]
             },
             {
               "key": "EnableCopyparty",
               "widget": "toggle",
-              "visibility": [
+              "title": "copyparty Service",
+              "description": "copyparty is a very capable file server, you can use it to download your routes, view your logs and even make some edits on some files from your browser. Requires you to connect to your comma locally via its IP address.",
+              "enablement": [
                 {
                   "type": "param",
                   "key": "ShowAdvancedControls",
                   "equals": true
                 }
-              ],
-              "title": "copyparty Service",
-              "description": "copyparty is a very capable file server, you can use it to download your routes, view your logs and even make some edits on some files from your browser. Requires you to connect to your comma locally via its IP address."
+              ]
             },
             {
               "key": "QuickBootToggle",
               "widget": "toggle",
-              "visibility": [
+              "enablement": [
+                {
+                  "type": "param",
+                  "key": "DisableUpdates",
+                  "equals": true
+                },
                 {
                   "type": "all",
                   "conditions": [
@@ -1767,13 +1874,6 @@
                       }
                     }
                   ]
-                }
-              ],
-              "enablement": [
-                {
-                  "type": "param",
-                  "key": "DisableUpdates",
-                  "equals": true
                 }
               ],
               "title": "Quickboot Mode"
@@ -1804,7 +1904,16 @@
             {
               "key": "LaneTurnValue",
               "widget": "option",
-              "visibility": [
+              "title": "Adjust Lane Turn Speed",
+              "description": "Set the maximum speed for lane turn desires.",
+              "min": 0,
+              "max": 20,
+              "step": 1,
+              "unit": {
+                "metric": "km/h",
+                "imperial": "mph"
+              },
+              "enablement": [
                 {
                   "type": "all",
                   "conditions": [
@@ -1820,13 +1929,7 @@
                     }
                   ]
                 }
-              ],
-              "title": "Adjust Lane Turn Speed",
-              "description": "Set the maximum speed for lane turn desires.",
-              "min": 0,
-              "max": 20,
-              "step": 1,
-              "unit": {"metric": "km/h", "imperial": "mph"}
+              ]
             },
             {
               "key": "LagdToggle",
@@ -1837,7 +1940,12 @@
             {
               "key": "LagdToggleDelay",
               "widget": "option",
-              "visibility": [
+              "title": "Adjust Software Delay",
+              "description": "Adjust the software delay when Live Learning Steer Delay is toggled off. The default software delay value is 0.2",
+              "min": 0.05,
+              "max": 0.5,
+              "step": 0.01,
+              "enablement": [
                 {
                   "type": "all",
                   "conditions": [
@@ -1856,12 +1964,7 @@
                     }
                   ]
                 }
-              ],
-              "title": "Adjust Software Delay",
-              "description": "Adjust the software delay when Live Learning Steer Delay is toggled off. The default software delay value is 0.2",
-              "min": 0.05,
-              "max": 0.5,
-              "step": 0.01
+              ]
             }
           ]
         },
