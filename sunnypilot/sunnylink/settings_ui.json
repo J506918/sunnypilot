@@ -502,7 +502,12 @@
               "key": "DisengageOnAccelerator",
               "widget": "toggle",
               "title": "Disengage Cruise on Accelerator Pedal",
-              "description": "When enabled, pressing the accelerator pedal will disengage longitudinal control."
+              "description": "When enabled, pressing the accelerator pedal will disengage longitudinal control.",
+              "enablement": [
+                {
+                  "type": "offroad_only"
+                }
+              ]
             },
             {
               "key": "LongitudinalPersonality",
@@ -562,11 +567,44 @@
           "id": "custom_acc_increments",
           "title": "Custom ACC Speed Intervals",
           "description": "",
+          "enablement": [
+            {
+              "type": "offroad_only"
+            },
+            {
+              "type": "any",
+              "conditions": [
+                {
+                  "type": "all",
+                  "conditions": [
+                    {
+                      "type": "capability",
+                      "field": "has_longitudinal_control",
+                      "equals": true
+                    },
+                    {
+                      "type": "not",
+                      "condition": {
+                        "type": "capability",
+                        "field": "pcm_cruise",
+                        "equals": true
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "capability",
+                  "field": "has_icbm",
+                  "equals": true
+                }
+              ]
+            }
+          ],
           "items": [
             {
               "key": "CustomAccIncrementsEnabled",
               "widget": "toggle",
-              "title": "Enable Custom ACC Speed Increments",
+              "title": "Enable Custom ACC Speed Intervals",
               "enablement": [
                 {
                   "type": "offroad_only"
@@ -599,8 +637,20 @@
                     }
                   ]
                 }
-              ],
-              "sub_items": [
+              ]
+            }
+          ],
+          "sub_panels": [
+            {
+              "id": "custom_acc_intervals",
+              "label": "Custom ACC Speed Intervals Settings",
+              "trigger_key": "CustomAccIncrementsEnabled",
+              "trigger_condition": {
+                "type": "param",
+                "key": "CustomAccIncrementsEnabled",
+                "equals": true
+              },
+              "items": [
                 {
                   "key": "CustomAccShortPressIncrement",
                   "widget": "option",
@@ -788,8 +838,17 @@
         },
         {
           "id": "smart_cruise",
-          "title": "Smart Cruise",
-          "description": "Dynamic and vision-based cruise enhancements",
+          "title": "Smart Cruise Control",
+          "description": "",
+          "enablement": [
+            {
+              "type": "any",
+              "conditions": [
+                { "type": "capability", "field": "has_longitudinal_control", "equals": true },
+                { "type": "capability", "field": "has_icbm", "equals": true }
+              ]
+            }
+          ],
           "items": [
             {
               "key": "SmartCruiseControlVision",
@@ -812,7 +871,6 @@
                 }
               ],
               "enablement": [
-                { "type": "offroad_only" },
                 {
                   "type": "any",
                   "conditions": [
@@ -821,7 +879,7 @@
                   ]
                 }
               ],
-              "title": "Smart Cruise Control - Vision",
+              "title": "Vision",
               "description": "Use vision path predictions to estimate the appropriate speed to drive through turns ahead."
             },
             {
@@ -845,7 +903,6 @@
                 }
               ],
               "enablement": [
-                { "type": "offroad_only" },
                 {
                   "type": "any",
                   "conditions": [
@@ -854,7 +911,7 @@
                   ]
                 }
               ],
-              "title": "Smart Cruise Control - Map",
+              "title": "Map",
               "description": "Use map data to estimate the appropriate speed to drive through turns ahead."
             }
           ]
