@@ -188,7 +188,7 @@ class UIState(UIStateSP):
         self.has_longitudinal_control = self.params.get_bool("AlphaLongitudinalEnabled")
       else:
         self.has_longitudinal_control = self.CP.openpilotLongitudinalControl
-    UIStateSP.update_params(self)
+    UIStateSP.update_params(self, CP_bytes, self.has_longitudinal_control)
     self._param_update_time = time.monotonic()
 
 

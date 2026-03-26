@@ -123,13 +123,13 @@ class UIStateSP:
 
     return "disengaged"
 
-  def update_params(self) -> None:
+  def update_params(self, CP=None, has_longitudinal_control=False) -> None:
     CP_SP_bytes = self.params.get("CarParamsSPPersistent")
     if CP_SP_bytes is not None:
       self.CP_SP = messaging.log_from_bytes(CP_SP_bytes, custom.CarParamsSP)
       self.has_icbm = self.CP_SP.intelligentCruiseButtonManagementAvailable and self.params.get_bool("IntelligentCruiseButtonManagement")
 
-    self._enforce_sp_constraints()
+    self._enforce_sp_constraints(CP, has_longitudinal_control)
     self.active_bundle = self.params.get("ModelManager_ActiveBundle")
     self.blindspot = self.params.get_bool("BlindSpot")
     self.chevron_metrics = self.params.get("ChevronInfo")
@@ -149,11 +149,7 @@ class UIStateSP:
     self.turn_signals = self.params.get_bool("ShowTurnSignals")
     self.boot_offroad_mode = self.params.get("DeviceBootMode", return_default=True)
 
-  def _enforce_sp_constraints(self) -> None:
-    has_long = getattr(self, 'has_longitudinal_control', False)
-    has_icbm = self.has_icbm
-    CP = getattr(self, 'CP', None)
-
+  def _enforce_sp_constraints(self, CP=None, has_longitudinal_control=False) -> None:
     if CP is not None:
       # Angle steering: no torque-based lateral controls
       if CP.steerControlType == car.CarParams.SteerControlType.angle:
@@ -174,18 +170,18 @@ class UIStateSP:
       self.params.remove("AlphaLongitudinalEnabled")
 
     # No longitudinal control: no experimental mode
-    if not has_long:
+    if not has_longitudinal_control:
       self.params.remove("ExperimentalMode")
 
     # ICBM: clear if not available or if full longitudinal control is active
     if self.CP_SP is not None:
-      if not self.CP_SP.intelligentCruiseButtonManagementAvailable or has_long:
+      if not self.CP_SP.intelligentCruiseButtonManagementAvailable or has_longitudinal_control:
         self.params.remove("IntelligentCruiseButtonManagement")
     else:
       self.params.remove("IntelligentCruiseButtonManagement")
 
     # Cruise features requiring longitudinal or ICBM
-    if not (has_long or has_icbm):
+    if not (has_longitudinal_control or self.has_icbm):
       self.params.remove("CustomAccIncrementsEnabled")
       self.params.remove("DynamicExperimentalControl")
       self.params.remove("SmartCruiseControlVision")
