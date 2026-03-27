@@ -130,7 +130,7 @@ class BookmarkIcon(Widget):
     if self._offset_filter.x > 0:
       icon_x = self.rect.x + self.rect.width - round(self._offset_filter.x)
       icon_y = self.rect.y + (self.rect.height - self._icon.height) / 2  # Vertically centered
-      rl.draw_texture(self._icon, int(icon_x), int(icon_y), rl.WHITE)
+      rl.draw_texture_ex(self._icon, rl.Vector2(icon_x, icon_y), 0.0, 1.0, rl.WHITE)
 
 
 class AugmentedRoadView(CameraView):
@@ -251,7 +251,7 @@ class AugmentedRoadView(CameraView):
     # Draw darkened background and text if not onroad
     if not ui_state.started:
       rl.draw_rectangle(int(self.rect.x), int(self.rect.y), int(self.rect.width), int(self.rect.height), rl.Color(0, 0, 0, 175))
-      self._offroad_label.render(self._content_rect)
+      self._offroad_label.render(self._rect)
 
     # publish uiDebug
     msg = messaging.new_message('uiDebug')
