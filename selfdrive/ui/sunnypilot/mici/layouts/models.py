@@ -69,12 +69,17 @@ class ModelsLayoutMici(NavScroller):
   def model_manager(self):
     return ui_state.sm["modelManagerSP"]
 
-  def _get_grouped_bundles(self):
+  def _get_grouped_bundles(self, favorites = None):
     bundles = self.model_manager.availableBundles
     folders = {}
     for bundle in bundles:
       folder = next((override.value for override in bundle.overrides if override.key == "folder"), "")
       folders.setdefault(folder, []).append(bundle)
+
+    if favorites:
+      for fav_bundle in [bundle for bundle in bundles if bundle.ref in favorites]:
+        folders.setdefault("favorites", []).append(fav_bundle)
+
     return folders
 
   def _show_selection_view(self, items, back_callback: Callable):
@@ -86,7 +91,11 @@ class ModelsLayoutMici(NavScroller):
 
   def _show_folders(self):
     self.focused_widget = self.select_model_btn
-    folders = self._get_grouped_bundles()
+
+    favs = ui_state.params.get("ModelManager_Favs")
+    favorites = set(favs.split(';')) if favs else set()
+
+    folders = self._get_grouped_bundles(favorites)
     folder_buttons = []
     default_btn = BigButton(tr("default model"))
     default_btn.set_click_callback(self._select_default)
@@ -96,7 +105,10 @@ class ModelsLayoutMici(NavScroller):
       if folder.lower() in ["release models", "master models"]:
         btn = BigButton(folder.lower())
         btn.set_click_callback(lambda f=folder: self._select_folder(f))
-        folder_buttons.append(btn)
+        if folder.lower() == "favorites":
+          folder_buttons.insert(0, btn)
+        else:
+          folder_buttons.append(btn)
     self._show_selection_view(folder_buttons, self._reset_main_view)
 
   def _select_model(self, bundle):
@@ -108,7 +120,10 @@ class ModelsLayoutMici(NavScroller):
     self._reset_main_view()
 
   def _select_folder(self, folder_name):
-    folders = self._get_grouped_bundles()
+    favs = ui_state.params.get("ModelManager_Favs")
+    favorites = set(favs.split(';')) if favs else set()
+
+    folders = self._get_grouped_bundles(favorites)
     bundles = sorted(folders.get(folder_name, []), key=lambda b: b.index, reverse=True)
 
     btns = []
