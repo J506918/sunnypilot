@@ -216,6 +216,22 @@ class DesiredSteeringPIDElement(LateralControlElement):
     return UiElement(value, "DESIRED STEER", self.unit, color)
 
 
+class TorqueReductionGainElement(LateralControlElement):
+  def __init__(self):
+    self.unit = ""
+
+  def update(self, sm, is_metric: bool) -> UiElement:
+    car_control = sm['carControl']
+    lat_active = car_control.latActive
+    steer_override = sm['carState'].steeringPressed
+    torque_output_can = car_control.actuators.torqueOutputCan
+
+    value = f"{torque_output_can:.2f}" if lat_active else "-"
+    color = self.get_lat_color(lat_active, steer_override)
+
+    return UiElement(value, "T.R.G.", self.unit, color)
+
+
 class AEgoElement:
   def __init__(self):
     self.unit = "m/s^2"
