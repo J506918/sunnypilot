@@ -69,6 +69,7 @@ class Joystick:
       return False
 
     event = (joystick_event.code, joystick_event.state)
+    print(f"event: code={joystick_event.code}, state={joystick_event.state}, ev_type={joystick_event.ev_type}")
 
     # flip left trigger to negative accel
     if event[0] in self.flip_map:
