@@ -1,1 +1,1 @@
-#define DEFAULT_MODEL "Off Policy (Default)"
+#define DEFAULT_MODEL "OP Model (Default)"
