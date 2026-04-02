@@ -142,8 +142,12 @@ msgid "Change Language"
 msgstr "Cambiar idioma"
 
 #: openpilot/selfdrive/ui/layouts/settings/toggles.py
-msgid "Changing this setting will restart openpilot if the car is powered on."
-msgstr " Cambiar esta configuración reiniciará openpilot si el coche está encendido."
+msgid "Changing this setting will restart sunnypilot if the car is powered on."
+msgstr ""
+
+#: system/ui/sunnypilot/widgets/sunnylink_pairing_dialog.py
+msgid "Choose your sponsorship tier and confirm your support"
+msgstr ""
 
 #: openpilot/selfdrive/ui/widgets/pairing_dialog.py
 msgid "Click \"add new device\" and scan the QR code on the right"
@@ -166,8 +170,8 @@ msgid "Decline"
 msgstr "Rechazar"
 
 #: openpilot/selfdrive/ui/layouts/onboarding.py
-msgid "Decline, uninstall openpilot"
-msgstr "Rechazar, desinstalar openpilot"
+msgid "Decline, uninstall sunnypilot"
+msgstr ""
 
 #: openpilot/selfdrive/ui/layouts/settings/settings.py
 msgid "Developer"
@@ -229,6 +233,10 @@ msgstr "ETH"
 msgid "EXPERIMENTAL MODE ON"
 msgstr "MODO EXPERIMENTAL ACTIVADO"
 
+#: system/ui/sunnypilot/widgets/sunnylink_pairing_dialog.py
+msgid "Early Access: Become a sunnypilot Sponsor"
+msgstr ""
+
 #: openpilot/selfdrive/ui/layouts/settings/developer.py
 #: openpilot/selfdrive/ui/layouts/settings/toggles.py
 msgid "Enable"
@@ -255,16 +263,16 @@ msgid "Enable Tethering"
 msgstr "Activar anclaje"
 
 #: openpilot/selfdrive/ui/layouts/settings/toggles.py
-msgid "Enable driver monitoring even when openpilot is not engaged."
-msgstr "Activar la supervisión del conductor incluso cuando openpilot no esté activado."
+msgid "Enable driver monitoring even when sunnypilot is not engaged."
+msgstr ""
 
 #: openpilot/selfdrive/ui/layouts/settings/toggles.py
-msgid "Enable openpilot"
-msgstr "Activar openpilot"
+msgid "Enable sunnypilot"
+msgstr ""
 
 #: openpilot/selfdrive/ui/layouts/settings/toggles.py
-msgid "Enable the openpilot longitudinal control (alpha) toggle to allow Experimental mode."
-msgstr "Activa el interruptor de control longitudinal de openpilot (alpha) para permitir el modo Experimental."
+msgid "Enable the sunnypilot longitudinal control (alpha) toggle to allow Experimental mode."
+msgstr ""
 
 #: system/ui/widgets/network.py
 msgid "Enter APN"
@@ -281,6 +289,10 @@ msgstr "Ingrese una nueva contraseña de anclaje a red"
 #: system/ui/widgets/network.py
 msgid "Enter password"
 msgstr "Introduce la contraseña"
+
+#: system/ui/sunnypilot/widgets/tree_dialog.py
+msgid "Enter search query"
+msgstr ""
 
 #: openpilot/selfdrive/ui/widgets/ssh_key.py
 msgid "Enter your GitHub username"
@@ -314,6 +326,10 @@ msgstr "Flujo masivo"
 msgid "Firehose Mode"
 msgstr "Modo Firehose"
 
+#: system/ui/sunnypilot/widgets/sunnylink_pairing_dialog.py
+msgid "Follow the prompts to complete the pairing process"
+msgstr ""
+
 #: system/ui/widgets/network.py
 msgid "Forget"
 msgstr "Olvidar"
@@ -346,9 +362,17 @@ msgstr "INSTALAR"
 msgid "IP Address"
 msgstr "Dirección IP"
 
+#: system/ui/sunnypilot/widgets/sunnylink_pairing_dialog.py
+msgid "If sponsorship status was not updated, please contact a moderator on the community forum at https://community.sunnypilot.ai"
+msgstr ""
+
 #: openpilot/selfdrive/ui/layouts/settings/software.py
 msgid "Install Update"
 msgstr "Instalar actualización"
+
+#: system/ui/sunnypilot/widgets/sunnylink_pairing_dialog.py
+msgid "Join our Community Forum at https://community.sunnypilot.ai and reach out to a moderator if you have issues"
+msgstr ""
 
 #: openpilot/selfdrive/ui/layouts/settings/developer.py
 msgid "Joystick Debug Mode"
@@ -361,6 +385,10 @@ msgstr "CARGANDO"
 #: openpilot/selfdrive/ui/layouts/sidebar.py
 msgid "LTE"
 msgstr "LTE"
+
+#: openpilot/selfdrive/ui/layouts/settings/developer.py
+msgid "Lateral Maneuver Mode"
+msgstr ""
 
 #: openpilot/selfdrive/ui/layouts/settings/developer.py
 msgid "Longitudinal Maneuver Mode"
@@ -436,6 +464,10 @@ msgstr "Emparejar dispositivo"
 msgid "Pair device"
 msgstr "Emparejar dispositivo"
 
+#: system/ui/sunnypilot/widgets/sunnylink_pairing_dialog.py
+msgid "Pair your GitHub account"
+msgstr ""
+
 #: openpilot/selfdrive/ui/widgets/pairing_dialog.py
 msgid "Pair your device to your comma account"
 msgstr "Empareja tu dispositivo con tu cuenta de comma"
@@ -480,6 +512,10 @@ msgstr "RESTABLECER"
 #: openpilot/selfdrive/ui/layouts/settings/device.py
 msgid "REVIEW"
 msgstr "REVISAR"
+
+#: system/ui/sunnypilot/widgets/sunnylink_pairing_dialog.py
+msgid "Re-enter the \"sunnylink\" panel to verify sponsorship status"
+msgstr ""
 
 #: openpilot/selfdrive/ui/layouts/settings/device.py
 msgid "Reboot"
@@ -538,8 +574,8 @@ msgid "Review Training Guide"
 msgstr "Revisar guía de entrenamiento"
 
 #: openpilot/selfdrive/ui/layouts/settings/device.py
-msgid "Review the rules, features, and limitations of openpilot"
-msgstr "Revisa las reglas, funciones y limitaciones de openpilot"
+msgid "Review the rules, features, and limitations of sunnypilot"
+msgstr ""
 
 #: openpilot/selfdrive/ui/layouts/settings/software.py
 msgid "SELECT"
@@ -549,9 +585,21 @@ msgstr "SELECCIONAR"
 msgid "SSH Keys"
 msgstr "Claves SSH"
 
+#: system/ui/sunnypilot/widgets/sunnylink_pairing_dialog.py
+msgid "Scan the QR code to login to your GitHub account"
+msgstr ""
+
+#: system/ui/sunnypilot/widgets/sunnylink_pairing_dialog.py
+msgid "Scan the QR code to visit sunnyhaibin's GitHub Sponsors page"
+msgstr ""
+
 #: system/ui/widgets/network.py
 msgid "Scanning Wi-Fi networks..."
 msgstr "Escaneando redes Wi-Fi..."
+
+#: system/ui/sunnypilot/widgets/tree_dialog.py
+msgid "Search"
+msgstr ""
 
 #: system/ui/widgets/option_dialog.py
 msgid "Select"
@@ -654,12 +702,12 @@ msgid "Waiting to start"
 msgstr "Esperando para iniciar"
 
 #: openpilot/selfdrive/ui/layouts/onboarding.py
-msgid "Welcome to openpilot"
-msgstr "Bienvenido a openpilot"
+msgid "Welcome to sunnypilot"
+msgstr ""
 
 #: openpilot/selfdrive/ui/layouts/settings/toggles.py
-msgid "When enabled, pressing the accelerator pedal will disengage openpilot."
-msgstr "Cuando está activado, al presionar el pedal del acelerador se desactivará openpilot."
+msgid "When enabled, pressing the accelerator pedal will disengage sunnypilot."
+msgstr ""
 
 #: openpilot/selfdrive/ui/layouts/sidebar.py
 msgid "Wi-Fi"
@@ -674,12 +722,12 @@ msgid "Wrong password"
 msgstr "Contraseña incorrecta"
 
 #: openpilot/selfdrive/ui/layouts/onboarding.py
-msgid "You must accept the Terms and Conditions in order to use openpilot."
-msgstr "Debes aceptar los Términos y Condiciones para poder usar openpilot."
+msgid "You must accept the Terms of Service in order to use sunnypilot."
+msgstr ""
 
 #: openpilot/selfdrive/ui/layouts/onboarding.py
-msgid "You must accept the Terms and Conditions to use openpilot. Read the latest terms at https://comma.ai/terms before continuing."
-msgstr "Debes aceptar los Términos y Condiciones para usar openpilot. Lee los términos más recientes en https://comma.ai/terms antes de continuar."
+msgid "You must accept the Terms of Service to use sunnypilot. Read the latest terms at https://sunnypilot.ai/terms before continuing."
+msgstr ""
 
 #: openpilot/selfdrive/ui/onroad/driver_camera_dialog.py
 msgid "camera starting"
@@ -745,25 +793,25 @@ msgstr "nunca"
 msgid "now"
 msgstr "ahora"
 
-#: openpilot/selfdrive/ui/layouts/settings/developer.py
-msgid "openpilot Longitudinal Control (Alpha)"
-msgstr "Control longitudinal de openpilot (Alpha)"
-
-#: openpilot/selfdrive/ui/onroad/alert_renderer.py
-msgid "openpilot Unavailable"
-msgstr "openpilot no disponible"
-
-#: openpilot/selfdrive/ui/layouts/settings/toggles.py
-msgid "openpilot longitudinal control may come in a future update."
-msgstr "El control longitudinal de openpilot podría llegar en una actualización futura."
-
-#: openpilot/selfdrive/ui/layouts/settings/device.py
-msgid "openpilot requires the device to be mounted within 4° left or right and within 5° up or 9° down."
-msgstr "openpilot requiere que el dispositivo esté montado dentro de 4° a izquierda o derecha y dentro de 5° hacia arriba o 9° hacia abajo."
-
 #: openpilot/selfdrive/ui/layouts/settings/device.py
 msgid "right"
 msgstr "derecha"
+
+#: openpilot/selfdrive/ui/layouts/settings/developer.py
+msgid "sunnypilot Longitudinal Control (Alpha)"
+msgstr ""
+
+#: openpilot/selfdrive/ui/onroad/alert_renderer.py
+msgid "sunnypilot Unavailable"
+msgstr ""
+
+#: openpilot/selfdrive/ui/layouts/settings/toggles.py
+msgid "sunnypilot longitudinal control may come in a future update."
+msgstr ""
+
+#: openpilot/selfdrive/ui/layouts/settings/device.py
+msgid "sunnypilot requires the device to be mounted within 4° left or right and within 5° up or 9° down."
+msgstr ""
 
 #: system/ui/widgets/network.py
 msgid "unmetered"
