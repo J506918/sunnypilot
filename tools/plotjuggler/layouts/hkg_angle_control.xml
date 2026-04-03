@@ -51,13 +51,6 @@
   </plugin>
   <plugin ID="CSV Exporter"/>
  </Plugins>
- <!-- - - - - - - - - - - - - - - -->
- <previouslyLoaded_Datafiles>
-  <fileInfo prefix="" filename="../tmpa_e8kwpj.rlog">
-   <selected_datasources value=""/>
-  </fileInfo>
- </previouslyLoaded_Datafiles>
- <!-- - - - - - - - - - - - - - - -->
  <customMathEquations>
   <snippet name="zero">
    <global>min=0

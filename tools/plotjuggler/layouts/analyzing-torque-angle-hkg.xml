@@ -155,13 +155,6 @@
   </plugin>
   <plugin ID="CSV Exporter"/>
  </Plugins>
- <!-- - - - - - - - - - - - - - - -->
- <previouslyLoaded_Datafiles>
-  <fileInfo filename="../tmpgh9xhmjb.rlog" prefix="">
-   <selected_datasources value=""/>
-  </fileInfo>
- </previouslyLoaded_Datafiles>
- <!-- - - - - - - - - - - - - - - -->
  <customMathEquations>
   <snippet name="Angle Staturation">
    <global></global>
