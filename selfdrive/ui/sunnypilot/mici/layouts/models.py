@@ -10,7 +10,7 @@ import pyray as rl
 from cereal import custom
 from openpilot.selfdrive.ui.mici.widgets.button import BigButton
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.models import ModelsLayout
-from openpilot.selfdrive.ui.ui_state import ui_state
+from openpilot.selfdrive.ui.ui_state import ui_state, device
 from openpilot.system.ui.lib.application import FontWeight, gui_app
 from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.widgets import Widget
@@ -27,7 +27,7 @@ class CurrentModelInfo(Widget):
     subheader_color = rl.Color(255, 255, 255, int(255 * 0.9 * 0.65))
     max_width = int(self._rect.width - 20)
     self.current_model_header = UnifiedLabel(tr("active model"), 48, max_width=max_width, text_color=header_color, font_weight=FontWeight.DISPLAY)
-    self.current_model_text = UnifiedLabel(tr("default model"), 32, max_width=max_width, text_color=subheader_color, font_weight=FontWeight.ROMAN)
+    self.current_model_text = UnifiedLabel(tr("default model"), 32, max_width=max_width, text_color=subheader_color, font_weight=FontWeight.ROMAN, scroll=True)
 
     self.info_header = UnifiedLabel("cache size", 48, max_width=max_width, text_color=header_color, font_weight=FontWeight.DISPLAY)
     self.info_text = UnifiedLabel("0 mb", 32, max_width=max_width, text_color=subheader_color, font_weight=FontWeight.ROMAN)
@@ -130,6 +130,8 @@ class ModelsLayoutMici(NavScroller):
 
     self.select_model_btn.set_enabled(ui_state.is_offroad())
     self.cancel_download_btn.set_visible(False)
+    self.current_model_info.current_model_header._shimmer = False
+    self.current_model_info.info_header._shimmer = False
 
     manager = self.model_manager
     self._download_frame += 1
@@ -138,7 +140,7 @@ class ModelsLayoutMici(NavScroller):
       self._download_progress = self._download_progress + "." if len(self._download_progress) < 3 else ""
 
     self.current_model_info.current_model_header.set_text(tr("active model"))
-    self.current_model_info.current_model_text.set_text(manager.activeBundle.internalName.lower() if manager.activeBundle.index > 0 else tr("default model"))
+    self.current_model_info.current_model_text.set_text(manager.activeBundle.displayName.lower() if manager.activeBundle.index > 0 else tr("default model"))
     self.current_model_info.info_header.set_text(tr("cache size"))
     self.current_model_info.info_text.set_text(f"{ModelsLayout.calculate_cache_size():.2f} MB")
 
@@ -148,6 +150,7 @@ class ModelsLayoutMici(NavScroller):
 
     elif manager.selectedBundle and manager.selectedBundle.status == custom.ModelManagerSP.DownloadStatus.downloading:
       self.cancel_download_btn.set_visible(True)
+      device.set_override_interactive_timeout(5)
       progress = 0.0
       count = 0
       for model in manager.selectedBundle.models:
@@ -160,7 +163,9 @@ class ModelsLayoutMici(NavScroller):
           progress += 100.0
 
       self.current_model_info.current_model_header.set_text(tr("downloading"))
+      self.current_model_info.current_model_header._shimmer = True
       self.current_model_info.current_model_text.set_text(f"{manager.selectedBundle.internalName.lower()}")
       self.current_model_info.info_header.set_text(tr("progress") + self._download_progress)
+      self.current_model_info.info_header._shimmer = True
       self.current_model_info.info_text.set_text(f"{progress/count:.2f}%")
 
