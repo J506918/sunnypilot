@@ -71,7 +71,7 @@ class SettingsLayoutSP(OP.SettingsLayout):
         ui_state.always_offroad = status
 
     if not enable:
-      dlg = BigConfirmationDialog(tr("slide to exit always offroad"), self.icon_offroad_slider, red=True,
+      dlg = BigConfirmationDialog(tr("slide to exit always offroad"), self.icon_offroad_slider, red=False,
                                   confirm_callback=lambda: _set_offroad_status(False))
     else:
       if ui_state.engaged:
