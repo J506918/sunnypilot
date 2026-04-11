@@ -44,6 +44,7 @@ class PanelInfo:
   name: str
   instance: Widget
   button_rect: rl.Rectangle = rl.Rectangle(0, 0, 0, 0)
+  translated_name: str = ""
 
 
 class SettingsLayout(Widget):
@@ -63,6 +64,10 @@ class SettingsLayout(Widget):
       PanelType.FIREHOSE: PanelInfo(tr_noop("Firehose"), FirehoseLayout()),
       PanelType.DEVELOPER: PanelInfo(tr_noop("Developer"), DeveloperLayout()),
     }
+
+    # Translate panel names once at startup and cache the results
+    for panel_info in self._panels.values():
+      panel_info.translated_name = tr(panel_info.name)
 
     self._font_medium = gui_app.font(FontWeight.MEDIUM)
     self._close_icon = gui_app.texture("icons/close2.png", CLOSE_ICON_SIZE, CLOSE_ICON_SIZE)
@@ -123,7 +128,7 @@ class SettingsLayout(Widget):
       is_selected = panel_type == self._current_panel
       text_color = TEXT_SELECTED if is_selected else TEXT_NORMAL
       # Draw button text (right-aligned)
-      panel_name = tr(panel_info.name)
+      panel_name = panel_info.translated_name
       text_size = measure_text_cached(self._font_medium, panel_name, 65)
       text_pos = rl.Vector2(
         button_rect.x + button_rect.width - text_size.x, button_rect.y + (button_rect.height - text_size.y) / 2
