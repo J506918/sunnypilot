@@ -96,6 +96,11 @@ class SteeringLayout(Widget):
       title=lambda: tr("Neural Network Lateral Control (NNLC)"),
       description=""
     )
+    self._rttc_toggle = toggle_item_sp(
+      param="RealTimeTorqueCorrection",
+      title=lambda: tr("Real-Time Torque Correction (RTTC)"),
+      description=""
+    )
 
     items = [
       self._mads_toggle,
@@ -111,6 +116,8 @@ class SteeringLayout(Widget):
       self._torque_customization_button,
       LineSeparatorSP(40),
       self._nnlc_toggle,
+      LineSeparatorSP(40),
+      self._rttc_toggle,
     ]
     return items
 
@@ -128,11 +135,13 @@ class SteeringLayout(Widget):
       if ui_state.CP.steerControlType == car.CarParams.SteerControlType.angle:
         ui_state.params.remove("EnforceTorqueControl")
         ui_state.params.remove("NeuralNetworkLateralControl")
+        ui_state.params.remove("RealTimeTorqueCorrection")
         torque_allowed = False
     else:
       self._mads_toggle.set_description(f"<b>{self._mads_check_compat_desc}</b><br><br>{self._mads_base_desc}")
       ui_state.params.remove("EnforceTorqueControl")
       ui_state.params.remove("NeuralNetworkLateralControl")
+      ui_state.params.remove("RealTimeTorqueCorrection")
       torque_allowed = False
 
     self._mads_toggle.action_item.set_enabled(ui_state.is_offroad())
@@ -142,8 +151,10 @@ class SteeringLayout(Widget):
 
     enforce_torque_enabled = self._torque_control_toggle.action_item.get_state()
     nnlc_enabled = self._nnlc_toggle.action_item.get_state()
-    self._nnlc_toggle.action_item.set_enabled(ui_state.is_offroad() and torque_allowed and not enforce_torque_enabled)
-    self._torque_control_toggle.action_item.set_enabled(ui_state.is_offroad() and torque_allowed and not nnlc_enabled)
+    rttc_enabled = self._rttc_toggle.action_item.get_state()
+    self._nnlc_toggle.action_item.set_enabled(ui_state.is_offroad() and torque_allowed and not enforce_torque_enabled and not rttc_enabled)
+    self._rttc_toggle.action_item.set_enabled(ui_state.is_offroad() and torque_allowed and not enforce_torque_enabled and not nnlc_enabled)
+    self._torque_control_toggle.action_item.set_enabled(ui_state.is_offroad() and torque_allowed and not nnlc_enabled and not rttc_enabled)
     self._torque_customization_button.action_item.set_enabled(self._torque_control_toggle.action_item.get_state())
 
   def _render(self, rect):
