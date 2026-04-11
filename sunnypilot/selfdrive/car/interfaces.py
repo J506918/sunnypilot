@@ -55,6 +55,22 @@ def _initialize_neural_network_lateral_control(CP: structs.CarParams, CP_SP: str
   return enabled
 
 
+def _initialize_rttc(CP: structs.CarParams, CP_SP: structs.CarParamsSP,
+                     params: Params = None, enabled: bool = False) -> bool:
+  if params is None:
+    params = Params()
+
+  rttc_model_path, rttc_model_name, exact_match = get_nn_model_path(CP)
+
+  if rttc_model_name == "MOCK":
+    cloudlog.error({"rttc event": "car doesn't match any Neural Network model"})
+
+  if rttc_model_name != "MOCK" and CP.steerControlType != structs.CarParams.SteerControlType.angle:
+    enabled = params.get_bool("RealTimeTorqueCorrection")
+
+  return enabled
+
+
 def _initialize_intelligent_cruise_button_management(CP: structs.CarParams, CP_SP: structs.CarParamsSP, params: Params = None) -> None:
   if params is None:
     params = Params()
@@ -64,8 +80,8 @@ def _initialize_intelligent_cruise_button_management(CP: structs.CarParams, CP_S
     CP_SP.pcmCruiseSpeed = False
 
 
-def _initialize_torque_lateral_control(CI: CarInterfaceBase, CP: structs.CarParams, enforce_torque: bool, nnlc_enabled: bool) -> None:
-  if nnlc_enabled or enforce_torque:
+def _initialize_torque_lateral_control(CI: CarInterfaceBase, CP: structs.CarParams, enforce_torque: bool, nnlc_enabled: bool, rttc_enabled: bool = False) -> None:
+  if nnlc_enabled or enforce_torque or rttc_enabled:
     CI.configure_torque_tune(CP.carFingerprint, CP.lateralTuning)
 
 
@@ -77,6 +93,7 @@ def _cleanup_unsupported_params(CP: structs.CarParams, CP_SP: structs.CarParamsS
     cloudlog.warning("SteerControlType is angle, cleaning up params")
     params.remove("NeuralNetworkLateralControl")
     params.remove("EnforceTorqueControl")
+    params.remove("RealTimeTorqueCorrection")
 
   if not CP_SP.intelligentCruiseButtonManagementAvailable or CP.openpilotLongitudinalControl:
     cloudlog.warning("ICBM not available or openpilot Longitudinal Control enabled, cleaning up params")
@@ -98,8 +115,9 @@ def setup_interfaces(CI: CarInterfaceBase, params: Params = None) -> None:
 
   enforce_torque = _enforce_torque_lateral_control(CP, params)
   nnlc_enabled = _initialize_neural_network_lateral_control(CP, CP_SP, params)
+  rttc_enabled = _initialize_rttc(CP, CP_SP, params)
   _initialize_intelligent_cruise_button_management(CP, CP_SP, params)
-  _initialize_torque_lateral_control(CI, CP, enforce_torque, nnlc_enabled)
+  _initialize_torque_lateral_control(CI, CP, enforce_torque, nnlc_enabled, rttc_enabled)
   _cleanup_unsupported_params(CP, CP_SP)
 
   try:
