@@ -5,7 +5,7 @@ from collections.abc import Callable
 from cereal import log
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos, FONT_SCALE
-from openpilot.system.ui.lib.multilang import tr, tr_noop
+from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.widgets import Widget
 
@@ -42,13 +42,13 @@ class Colors:
 
 
 NETWORK_TYPES = {
-  NetworkType.none: tr_noop("--"),
-  NetworkType.wifi: tr_noop("Wi-Fi"),
-  NetworkType.ethernet: tr_noop("ETH"),
-  NetworkType.cell2G: tr_noop("2G"),
-  NetworkType.cell3G: tr_noop("3G"),
-  NetworkType.cell4G: tr_noop("LTE"),
-  NetworkType.cell5G: tr_noop("5G"),
+  NetworkType.none: "--",
+  NetworkType.wifi: "Wi-Fi",
+  NetworkType.ethernet: "ETH",
+  NetworkType.cell2G: "2G",
+  NetworkType.cell3G: "3G",
+  NetworkType.cell4G: "LTE",
+  NetworkType.cell5G: "5G",
 }
 
 
@@ -68,12 +68,38 @@ class Sidebar(Widget, SidebarSP):
   def __init__(self):
     Widget.__init__(self)
     SidebarSP.__init__(self)
-    self._net_type = NETWORK_TYPES.get(NetworkType.none)
+
+    # Translate network types once at startup
+    self._network_types = {
+      NetworkType.none: tr("--"),
+      NetworkType.wifi: tr("Wi-Fi"),
+      NetworkType.ethernet: tr("ETH"),
+      NetworkType.cell2G: tr("2G"),
+      NetworkType.cell3G: tr("3G"),
+      NetworkType.cell4G: tr("LTE"),
+      NetworkType.cell5G: tr("5G"),
+    }
+
+    # Translate labels once at startup
+    self._label_temp = tr("TEMP")
+    self._label_good = tr("GOOD")
+    self._label_ok = tr("OK")
+    self._label_high = tr("HIGH")
+    self._label_vehicle = tr("VEHICLE")
+    self._label_online = tr("ONLINE")
+    self._label_connect = tr("CONNECT")
+    self._label_offline = tr("OFFLINE")
+    self._label_error = tr("ERROR")
+    self._label_no = tr("NO")
+    self._label_panda = tr("PANDA")
+    self._label_unknown = tr("Unknown")
+
+    self._net_type = self._network_types.get(NetworkType.none)
     self._net_strength = 0
 
-    self._temp_status = MetricData(tr_noop("TEMP"), tr_noop("GOOD"), Colors.GOOD)
-    self._panda_status = MetricData(tr_noop("VEHICLE"), tr_noop("ONLINE"), Colors.GOOD)
-    self._connect_status = MetricData(tr_noop("CONNECT"), tr_noop("OFFLINE"), Colors.WARNING)
+    self._temp_status = MetricData(self._label_temp, self._label_good, Colors.GOOD)
+    self._panda_status = MetricData(self._label_vehicle, self._label_online, Colors.GOOD)
+    self._connect_status = MetricData(self._label_connect, self._label_offline, Colors.WARNING)
     self._recording_audio = False
 
     self._home_img = gui_app.texture("images/button_home.png", HOME_BTN.width, HOME_BTN.height)
@@ -118,7 +144,7 @@ class Sidebar(Widget, SidebarSP):
     SidebarSP._update_sunnylink_status(self)
 
   def _update_network_status(self, device_state):
-    self._net_type = NETWORK_TYPES.get(device_state.networkType.raw, tr_noop("Unknown"))
+    self._net_type = self._network_types.get(device_state.networkType.raw, self._label_unknown)
     strength = device_state.networkStrength
     self._net_strength = max(0, min(5, strength.raw + 1)) if strength.raw > 0 else 0
 
@@ -126,26 +152,26 @@ class Sidebar(Widget, SidebarSP):
     thermal_status = device_state.thermalStatus
 
     if thermal_status == ThermalStatus.green:
-      self._temp_status.update(tr_noop("TEMP"), tr_noop("GOOD"), Colors.GOOD)
+      self._temp_status.update(self._label_temp, self._label_good, Colors.GOOD)
     elif thermal_status == ThermalStatus.yellow:
-      self._temp_status.update(tr_noop("TEMP"), tr_noop("OK"), Colors.WARNING)
+      self._temp_status.update(self._label_temp, self._label_ok, Colors.WARNING)
     else:
-      self._temp_status.update(tr_noop("TEMP"), tr_noop("HIGH"), Colors.DANGER)
+      self._temp_status.update(self._label_temp, self._label_high, Colors.DANGER)
 
   def _update_connection_status(self, device_state):
     last_ping = device_state.lastAthenaPingTime
     if last_ping == 0:
-      self._connect_status.update(tr_noop("CONNECT"), tr_noop("OFFLINE"), Colors.WARNING)
+      self._connect_status.update(self._label_connect, self._label_offline, Colors.WARNING)
     elif time.monotonic_ns() - last_ping < 80_000_000_000:  # 80 seconds in nanoseconds
-      self._connect_status.update(tr_noop("CONNECT"), tr_noop("ONLINE"), Colors.GOOD)
+      self._connect_status.update(self._label_connect, self._label_online, Colors.GOOD)
     else:
-      self._connect_status.update(tr_noop("CONNECT"), tr_noop("ERROR"), Colors.DANGER)
+      self._connect_status.update(self._label_connect, self._label_error, Colors.DANGER)
 
   def _update_panda_status(self):
     if ui_state.panda_type == log.PandaState.PandaType.unknown:
-      self._panda_status.update(tr_noop("NO"), tr_noop("PANDA"), Colors.DANGER)
+      self._panda_status.update(self._label_no, self._label_panda, Colors.DANGER)
     else:
-      self._panda_status.update(tr_noop("VEHICLE"), tr_noop("ONLINE"), Colors.GOOD)
+      self._panda_status.update(self._label_vehicle, self._label_online, Colors.GOOD)
 
   def _handle_mouse_release(self, mouse_pos: MousePos):
     if rl.check_collision_point_rec(mouse_pos, SETTINGS_BTN):
@@ -201,7 +227,7 @@ class Sidebar(Widget, SidebarSP):
     # Network type text
     text_y = rect.y + 247
     text_pos = rl.Vector2(rect.x + 58, text_y)
-    rl.draw_text_ex(self._font_regular, tr(self._net_type), text_pos, FONT_SIZE, 0, Colors.WHITE)
+    rl.draw_text_ex(self._font_regular, self._net_type, text_pos, FONT_SIZE, 0, Colors.WHITE)
 
   def _draw_metrics(self, rect: rl.Rectangle):
     if gui_app.sunnypilot_ui():
@@ -228,7 +254,7 @@ class Sidebar(Widget, SidebarSP):
     rl.draw_rectangle_rounded_lines_ex(metric_rect, 0.3, 10, 2, Colors.METRIC_BORDER)
 
     # Draw label and value
-    labels = [tr(metric.label), tr(metric.value)]
+    labels = [metric.label, metric.value]
     text_y = metric_rect.y + (metric_rect.height / 2 - len(labels) * FONT_SIZE * FONT_SCALE)
     for text in labels:
       text_size = measure_text_cached(self._font_bold, text, FONT_SIZE)

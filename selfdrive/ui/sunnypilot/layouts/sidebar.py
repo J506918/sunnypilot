@@ -9,7 +9,7 @@ import time
 from dataclasses import dataclass
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.sunnypilot.sunnylink.api import UNREGISTERED_SUNNYLINK_DONGLE_ID
-from openpilot.system.ui.lib.multilang import tr_noop
+from openpilot.system.ui.lib.multilang import tr
 
 
 PING_TIMEOUT_NS = 80_000_000_000  # 80 seconds in nanoseconds
@@ -52,11 +52,20 @@ class MetricData:
 
 class SidebarSP:
   def __init__(self):
-    self._sunnylink_status = MetricData(tr_noop("SUNNYLINK"), tr_noop("OFFLINE"), Colors.WARNING)
+    # Translate sunnylink labels once at startup
+    self._label_sunnylink = tr("SUNNYLINK")
+    self._label_sl_offline = tr("OFFLINE")
+    self._label_sl_online = tr("ONLINE")
+    self._label_sl_disabled = tr("DISABLED")
+    self._label_sl_error = tr("ERROR")
+    self._label_sl_fault = tr("FAULT")
+    self._label_sl_registering = tr("REGIST...")
+
+    self._sunnylink_status = MetricData(self._label_sunnylink, self._label_sl_offline, Colors.WARNING)
 
   def _update_sunnylink_status(self):
     if not ui_state.params.get_bool("SunnylinkEnabled"):
-      self._sunnylink_status.update(tr_noop("SUNNYLINK"), tr_noop("DISABLED"), Colors.DISABLED)
+      self._sunnylink_status.update(self._label_sunnylink, self._label_sl_disabled, Colors.DISABLED)
       return
 
     last_ping = ui_state.params.get("LastSunnylinkPingTime") or 0
@@ -68,15 +77,15 @@ class SidebarSP:
 
     # Determine status/color pair based on priority
     if last_ping:
-      status, color = (tr_noop("ONLINE"), Colors.GOOD) if is_online else (tr_noop("ERROR"), Colors.DANGER)
+      status, color = (self._label_sl_online, Colors.GOOD) if is_online else (self._label_sl_error, Colors.DANGER)
     elif is_temp_fault:
-      status, color = (tr_noop("FAULT"), Colors.WARNING)
+      status, color = (self._label_sl_fault, Colors.WARNING)
     elif is_registering:
-      status, color = (tr_noop("REGIST..."), Colors.PROGRESS)
+      status, color = (self._label_sl_registering, Colors.PROGRESS)
     else:
-      status, color = (tr_noop("OFFLINE"), Colors.DANGER)
+      status, color = (self._label_sl_offline, Colors.DANGER)
 
-    self._sunnylink_status.update(tr_noop("SUNNYLINK"), status, color)
+    self._sunnylink_status.update(self._label_sunnylink, status, color)
 
   def _draw_metrics_w_sunnylink(self, rect: rl.Rectangle, _temp, _panda, _connect):
     metrics = [_temp, _panda, _connect, self._sunnylink_status]
