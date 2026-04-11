@@ -45,27 +45,27 @@ class SteeringLayout(Widget):
 
     self._mads_toggle = toggle_item_sp(
       param="Mads",
-      title=lambda: tr("Modular Assistive Driving System (MADS)"),
+      title=tr("Modular Assistive Driving System (MADS)"),
       description=self._mads_base_desc,
     )
     self._mads_settings_button = simple_button_item_sp(
-      button_text=lambda: tr("Customize MADS"),
+      button_text=tr("Customize MADS"),
       button_width=800,
       callback=lambda: self._set_current_panel(PanelType.MADS)
     )
     self._lane_change_settings_button = simple_button_item_sp(
-      button_text=lambda: tr("Customize Lane Change"),
+      button_text=tr("Customize Lane Change"),
       button_width=800,
       callback=lambda: self._set_current_panel(PanelType.LANE_CHANGE)
     )
     self._blinker_control_toggle = toggle_item_sp(
       param="BlinkerPauseLateralControl",
-      description=lambda: tr("Pause lateral control with blinker when traveling below the desired speed selected."),
-      title=lambda: tr("Pause Lateral Control with Blinker"),
+      description=tr("Pause lateral control with blinker when traveling below the desired speed selected."),
+      title=tr("Pause Lateral Control with Blinker"),
     )
     self._blinker_control_options = option_item_sp(
       param="BlinkerMinLateralControlSpeed",
-      title=lambda: tr("Minimum Speed to Pause Lateral Control"),
+      title=tr("Minimum Speed to Pause Lateral Control"),
       min_value=0,
       max_value=255,
       value_change_step=5,
@@ -74,31 +74,31 @@ class SteeringLayout(Widget):
     )
     self._blinker_reengage_delay = option_item_sp(
       param="BlinkerLateralReengageDelay",
-      title=lambda: tr("Post-Blinker Delay"),
+      title=tr("Post-Blinker Delay"),
       min_value=0,
       max_value=10,
       value_change_step=1,
-      description=lambda: tr("Delay before lateral control resumes after the turn signal ends."),
+      description=tr("Delay before lateral control resumes after the turn signal ends."),
       label_callback=lambda delay: f'{delay} {"s"}'
     )
     self._torque_control_toggle = toggle_item_sp(
       param="EnforceTorqueControl",
-      title=lambda: tr("Enforce Torque Lateral Control"),
-      description=lambda: tr("Enable this to enforce sunnypilot to steer with Torque lateral control."),
+      title=tr("Enforce Torque Lateral Control"),
+      description=tr("Enable this to enforce sunnypilot to steer with Torque lateral control."),
     )
     self._torque_customization_button = simple_button_item_sp(
-      button_text=lambda: tr("Customize Torque Params"),
+      button_text=tr("Customize Torque Params"),
       button_width=850,
       callback=lambda: self._set_current_panel(PanelType.TORQUE_CONTROL)
     )
     self._nnlc_toggle = toggle_item_sp(
       param="NeuralNetworkLateralControl",
-      title=lambda: tr("Neural Network Lateral Control (NNLC)"),
+      title=tr("Neural Network Lateral Control (NNLC)"),
       description=""
     )
     self._rttc_toggle = toggle_item_sp(
       param="RealTimeTorqueCorrection",
-      title=lambda: tr("Real-Time Torque Correction (RTTC)"),
+      title=tr("Real-Time Torque Correction (RTTC)"),
       description=""
     )
 
