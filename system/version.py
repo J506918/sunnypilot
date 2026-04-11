@@ -34,22 +34,18 @@ terms_version_sp: str = "1.0"
 sunnylink_consent_version: str = "1.0"
 sunnylink_consent_declined: str = "-1"
 
-
 def get_version(path: str = BASEDIR) -> str:
   with open(os.path.join(path, "sunnypilot", "common", "version.h")) as _versionf:
     version = _versionf.read().split('"')[1]
   return version
 
-
 def get_release_notes(path: str = BASEDIR) -> str:
   with open(os.path.join(path, "CHANGELOG.md")) as f:
     return f.read().split('\n\n', 1)[0]
 
-
 @cache
 def is_prebuilt(path: str = BASEDIR) -> bool:
   return os.path.exists(os.path.join(path, 'prebuilt'))
-
 
 @cache
 def is_dirty(cwd: str = BASEDIR) -> bool:
@@ -76,7 +72,6 @@ def is_dirty(cwd: str = BASEDIR) -> bool:
 
   return dirty
 
-
 @dataclass
 class OpenpilotMetadata:
   version: str
@@ -102,7 +97,8 @@ class OpenpilotMetadata:
     return self.git_normalized_origin in ("github.com/sunnypilot/sunnypilot",
                                           "github.com/sunnypilot/openpilot",
                                           "github.com/sunnyhaibin/sunnypilot",
-                                          "github.com/sunnyhaibin/openpilot")
+                                          "github.com/sunnyhaibin/openpilot",
+                                          "github.com/J506918/sunnypilot")
 
   @property
   def git_normalized_origin(self) -> str:
@@ -111,7 +107,6 @@ class OpenpilotMetadata:
       .replace(".git", "", 1) \
       .replace("https://", "", 1) \
       .replace(":", "/", 1)
-
 
 @dataclass
 class BuildMetadata:
