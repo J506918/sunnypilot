@@ -41,15 +41,6 @@ class Colors:
   BUTTON_PRESSED = rl.Color(255, 255, 255, 166)
 
 
-NETWORK_TYPES = {
-  NetworkType.none: "--",
-  NetworkType.wifi: "Wi-Fi",
-  NetworkType.ethernet: "ETH",
-  NetworkType.cell2G: "2G",
-  NetworkType.cell3G: "3G",
-  NetworkType.cell4G: "LTE",
-  NetworkType.cell5G: "5G",
-}
 
 
 @dataclass(slots=True)

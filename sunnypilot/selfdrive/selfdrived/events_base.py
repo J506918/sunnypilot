@@ -232,11 +232,14 @@ class NormalPermanentAlert(Alert):
                      priority, VisualAlert.none, AudibleAlert.none, duration, creation_delay=creation_delay),
 
 
+_STARTUP_DEFAULT_SUBTEXT = "Always keep hands on wheel and eyes on road"
+
+
 class StartupAlert(Alert):
-  def __init__(self, alert_text_1: str, alert_text_2: str = tr("Always keep hands on wheel and eyes on road"), alert_status=AlertStatus.normal):
+  def __init__(self, alert_text_1: str, alert_text_2: str = tr(_STARTUP_DEFAULT_SUBTEXT), alert_status=AlertStatus.normal):
     alert_size = AlertSize.mid
     if HARDWARE.get_device_type() == 'mici':
-      if alert_text_2 == tr("Always keep hands on wheel and eyes on road"):
+      if alert_text_2 in (_STARTUP_DEFAULT_SUBTEXT, tr(_STARTUP_DEFAULT_SUBTEXT)):
         alert_text_2 = ""
       alert_size = AlertSize.small
     super().__init__(alert_text_1, alert_text_2,
