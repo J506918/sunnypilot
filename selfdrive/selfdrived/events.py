@@ -89,9 +89,12 @@ def below_steer_speed_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.S
 
 
 def calibration_incomplete_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
-  first_word = 'Recalibrating' if sm['liveCalibration'].calStatus == log.LiveCalibrationData.Status.recalibrating else 'Calibrating'
+  if sm['liveCalibration'].calStatus == log.LiveCalibrationData.Status.recalibrating:
+    first_word = tr('Recalibrating')
+  else:
+    first_word = tr('Calibrating')
   return Alert(
-    tr("{}: {:.0f}%").format(tr(first_word), sm['liveCalibration'].calPerc),
+    tr("{}: {:.0f}%").format(first_word, sm['liveCalibration'].calPerc),
     tr("Drive Above {}").format(get_display_speed(MIN_SPEED_FILTER, metric)),
     AlertStatus.normal, AlertSize.mid,
     Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .2)
@@ -167,7 +170,7 @@ def overheat_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster,
   cpu = max(sm['deviceState'].cpuTempC, default=0.)
   gpu = max(sm['deviceState'].gpuTempC, default=0.)
   temp = max((cpu, gpu, sm['deviceState'].memoryTempC))
-  return NormalPermanentAlert(tr("System Overheated"), f"{temp:.0f} °C")
+  return NormalPermanentAlert(tr("System Overheated"), tr("{:.0f} °C").format(temp))
 
 
 def low_memory_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:

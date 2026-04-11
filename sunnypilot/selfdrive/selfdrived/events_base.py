@@ -236,11 +236,12 @@ class NormalPermanentAlert(Alert):
 
 class StartupAlert(Alert):
   def __init__(self, alert_text_1: str, alert_text_2: str = None, alert_status=AlertStatus.normal):
-    if alert_text_2 is None:
+    is_default_text2 = alert_text_2 is None
+    if is_default_text2:
       alert_text_2 = tr("Always keep hands on wheel and eyes on road")
     alert_size = AlertSize.mid
     if HARDWARE.get_device_type() == 'mici':
-      if alert_text_2 == tr("Always keep hands on wheel and eyes on road"):
+      if is_default_text2:
         alert_text_2 = ""
       alert_size = AlertSize.small
     super().__init__(alert_text_1, alert_text_2,
