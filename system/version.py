@@ -94,11 +94,7 @@ class OpenpilotMetadata:
 
   @property
   def sunnypilot_remote(self) -> bool:
-    return self.git_normalized_origin in ("github.com/sunnypilot/sunnypilot",
-                                          "github.com/sunnypilot/openpilot",
-                                          "github.com/sunnyhaibin/sunnypilot",
-                                          "github.com/sunnyhaibin/openpilot",
-                                          "github.com/J506918/sunnypilot")
+    return self.git_normalized_origin == "github.com/J506918/sunnypilot"
 
   @property
   def git_normalized_origin(self) -> str:
@@ -156,7 +152,6 @@ class BuildMetadata:
     else:
       return "feature"
 
-
 def build_metadata_from_dict(build_metadata: dict) -> BuildMetadata:
   channel = build_metadata.get("channel", "unknown")
   openpilot_metadata = build_metadata.get("openpilot", {})
@@ -175,7 +170,6 @@ def build_metadata_from_dict(build_metadata: dict) -> BuildMetadata:
               git_commit_date=git_commit_date,
               build_style=build_style,
               is_dirty=False))
-
 
 def get_build_metadata(path: str = BASEDIR) -> BuildMetadata:
   build_metadata_path = pathlib.Path(path) / BUILD_METADATA_FILENAME
@@ -199,7 +193,6 @@ def get_build_metadata(path: str = BASEDIR) -> BuildMetadata:
 
   cloudlog.exception("unable to get build metadata")
   raise Exception("invalid build metadata")
-
 
 if __name__ == "__main__":
   print(get_build_metadata())
