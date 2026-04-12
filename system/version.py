@@ -11,7 +11,7 @@ from openpilot.common.swaglog import cloudlog
 from openpilot.common.git import get_commit, get_origin, get_branch, get_short_branch, get_commit_date
 
 RELEASE_SP_BRANCHES = ['release-c3', 'release', 'release-tizi', 'release-tici', 'release-tizi-staging', 'release-tici-staging']
-TESTED_SP_BRANCHES = ['staging-c3', 'staging-c3-new', 'staging']
+TESTED_SP_BRANCHES = ['staging-c3', 'staging-c3-new', 'staging', 'staging-zh']
 MASTER_SP_BRANCHES = ['master']
 RELEASE_BRANCHES = ['release-tizi-staging', 'release-mici-staging', 'release-tizi', 'release-mici', 'nightly']
 TESTED_BRANCHES = RELEASE_BRANCHES + ['devel-staging', 'nightly-dev'] + RELEASE_SP_BRANCHES + TESTED_SP_BRANCHES
@@ -34,22 +34,18 @@ terms_version_sp: str = "1.0"
 sunnylink_consent_version: str = "1.0"
 sunnylink_consent_declined: str = "-1"
 
-
 def get_version(path: str = BASEDIR) -> str:
   with open(os.path.join(path, "sunnypilot", "common", "version.h")) as _versionf:
     version = _versionf.read().split('"')[1]
   return version
 
-
 def get_release_notes(path: str = BASEDIR) -> str:
   with open(os.path.join(path, "CHANGELOG.md")) as f:
     return f.read().split('\n\n', 1)[0]
 
-
 @cache
 def is_prebuilt(path: str = BASEDIR) -> bool:
   return os.path.exists(os.path.join(path, 'prebuilt'))
-
 
 @cache
 def is_dirty(cwd: str = BASEDIR) -> bool:
@@ -76,7 +72,6 @@ def is_dirty(cwd: str = BASEDIR) -> bool:
 
   return dirty
 
-
 @dataclass
 class OpenpilotMetadata:
   version: str
@@ -99,10 +94,7 @@ class OpenpilotMetadata:
 
   @property
   def sunnypilot_remote(self) -> bool:
-    return self.git_normalized_origin in ("github.com/sunnypilot/sunnypilot",
-                                          "github.com/sunnypilot/openpilot",
-                                          "github.com/sunnyhaibin/sunnypilot",
-                                          "github.com/sunnyhaibin/openpilot")
+    return self.git_normalized_origin == "github.com/J506918/sunnypilot"
 
   @property
   def git_normalized_origin(self) -> str:
@@ -111,7 +103,6 @@ class OpenpilotMetadata:
       .replace(".git", "", 1) \
       .replace("https://", "", 1) \
       .replace(":", "/", 1)
-
 
 @dataclass
 class BuildMetadata:
@@ -161,7 +152,6 @@ class BuildMetadata:
     else:
       return "feature"
 
-
 def build_metadata_from_dict(build_metadata: dict) -> BuildMetadata:
   channel = build_metadata.get("channel", "unknown")
   openpilot_metadata = build_metadata.get("openpilot", {})
@@ -180,7 +170,6 @@ def build_metadata_from_dict(build_metadata: dict) -> BuildMetadata:
               git_commit_date=git_commit_date,
               build_style=build_style,
               is_dirty=False))
-
 
 def get_build_metadata(path: str = BASEDIR) -> BuildMetadata:
   build_metadata_path = pathlib.Path(path) / BUILD_METADATA_FILENAME
@@ -204,7 +193,6 @@ def get_build_metadata(path: str = BASEDIR) -> BuildMetadata:
 
   cloudlog.exception("unable to get build metadata")
   raise Exception("invalid build metadata")
-
 
 if __name__ == "__main__":
   print(get_build_metadata())
