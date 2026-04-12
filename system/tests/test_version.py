@@ -50,8 +50,8 @@ class TestVersionImports:
     )
     for name in str_constants:
       value = getattr(mod, name, None)
-      assert isinstance(value, str), f"system.version.{name} must be a non-empty str, got {value!r}"
-      assert value, f"system.version.{name} must not be empty"
+      assert isinstance(value, str) and value, \
+        f"system.version.{name} must be a non-empty str, got {value!r}"
 
     list_constants = (
       "RELEASE_BRANCHES",
