@@ -2578,6 +2578,8 @@ msgstr "自定义扭矩参数"
 msgid "Neural Network Lateral Control (NNLC)"
 msgstr "神经网络横向控制（NNLC）"
 
+msgid "Real-Time Torque Correction (RTTC)"
+msgstr "实时扭矩修正（RTTC）"
 
 #: selfdrive/ui/sunnypilot/layouts/settings/trips.py
 
