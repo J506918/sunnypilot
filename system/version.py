@@ -191,8 +191,28 @@ def get_build_metadata(path: str = BASEDIR) -> BuildMetadata:
                       build_style="unknown",
                       is_dirty=is_dirty(path)))
 
-  cloudlog.exception("unable to get build metadata")
-  raise Exception("invalid build metadata")
+  # Neither build.json nor .git is present (e.g. tarball/snapshot deployment
+  # without a pre-generated build.json).  Log a warning and return safe fallback
+  # values so the startup chain does not abort.  Display-only fields will show
+  # "unknown" in the UI, but the device will still boot normally.
+  cloudlog.warning("build metadata unavailable (expected for tarball/snapshot deployments without a pre-generated build.json): no build.json and no .git directory; using fallback values")
+  try:
+    version = get_version(path)
+  except Exception:
+    version = "unknown"
+  try:
+    release_notes = get_release_notes(path)
+  except Exception:
+    release_notes = ""
+  return BuildMetadata("unknown",
+                  OpenpilotMetadata(
+                    version=version,
+                    release_notes=release_notes,
+                    git_commit="unknown",
+                    git_origin="unknown",
+                    git_commit_date="unknown",
+                    build_style="unknown",
+                    is_dirty=False))
 
 if __name__ == "__main__":
   print(get_build_metadata())

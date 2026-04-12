@@ -8,6 +8,7 @@ import time and left devices stuck on the boot logo with no ability to self-heal
 """
 import importlib
 import inspect
+import json
 import types
 
 
@@ -66,3 +67,50 @@ class TestVersionImports:
 
     assert isinstance(getattr(mod, "SP_BRANCH_MIGRATIONS", None), dict), \
       "system.version.SP_BRANCH_MIGRATIONS must be a dict"
+
+
+class TestGetBuildMetadata:
+  """Verify get_build_metadata() behaves correctly in all deployment scenarios."""
+
+  def test_fallback_when_no_git_and_no_build_json(self, tmp_path):
+    """get_build_metadata() must not raise when neither .git nor build.json is present.
+
+    This is the tarball/snapshot deployment scenario that previously caused
+    'Exception: invalid build metadata' and prevented the device from booting.
+    """
+    # Create a minimal directory that looks like a deployed openpilot tree
+    # (no .git, no build.json, but version.h and CHANGELOG.md present)
+    sp_common = tmp_path / "sunnypilot" / "common"
+    sp_common.mkdir(parents=True)
+    (sp_common / "version.h").write_text('#define SUNNYPILOT_VERSION "0.0.0-test"\n')
+    (tmp_path / "CHANGELOG.md").write_text("Test version 0.0.0\n\nSome notes")
+
+    from openpilot.system.version import get_build_metadata, BuildMetadata
+    # Must not raise
+    meta = get_build_metadata(str(tmp_path))
+    assert isinstance(meta, BuildMetadata)
+    assert meta.channel == "unknown"
+    assert meta.openpilot.version == "0.0.0-test"
+    assert meta.openpilot.git_commit == "unknown"
+
+  def test_build_json_takes_precedence(self, tmp_path):
+    """When build.json exists, its values must be used regardless of .git presence."""
+    build_json = {
+      "channel": "staging-zh",
+      "openpilot": {
+        "version": "1.2.3",
+        "release_notes": "notes",
+        "git_commit": "abc123",
+        "git_origin": "https://github.com/example/repo",
+        "git_commit_date": "2026-01-01T00:00:00Z",
+        "build_style": "unknown",
+      }
+    }
+    (tmp_path / "build.json").write_text(json.dumps(build_json))
+
+    from openpilot.system.version import get_build_metadata, BuildMetadata
+    meta = get_build_metadata(str(tmp_path))
+    assert isinstance(meta, BuildMetadata)
+    assert meta.channel == "staging-zh"
+    assert meta.openpilot.version == "1.2.3"
+    assert meta.openpilot.git_commit == "abc123"
