@@ -52,7 +52,7 @@ jobs:
 
           CORRECT_PROPERTY = f"""  @property
             def sunnypilot_remote(self) -> bool:
-              return self.git_normalized_origin == "{CORRECT_REMOTE}""" 
+              return self.git_normalized_origin == \"{CORRECT_REMOTE}\""" 
 
           REMOTE_PATTERN = re.compile(
               r'(  @property\s+def sunnypilot_remote\(self\) -> bool:\s+return self\.git_normalized_origin.*?)(?=\n  @|\nclass |\Z)',
@@ -86,7 +86,7 @@ jobs:
               if not match:
                   return False
               block = match.group(1)
-              if f'== "{CORRECT_REMOTE}"' in block and "in (" not in block:
+              if f'== \"{CORRECT_REMOTE}\"' in block and "in (" not in block:
                   return False
               return True
 
@@ -125,4 +125,3 @@ jobs:
 
           print("\n✅ 扫描完毕！")
           EOF
-        
