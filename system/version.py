@@ -54,7 +54,9 @@ def is_dirty(cwd: str = BASEDIR) -> bool:
 
   dirty = False
   try:
+    # Actually check dirty files
     if not is_prebuilt(cwd):
+      # This is needed otherwise touched files might show up as modified
       try:
         subprocess.check_call(["git", "update-index", "--refresh"], cwd=cwd)
       except subprocess.CalledProcessError:
@@ -86,6 +88,8 @@ class OpenpilotMetadata:
 
   @property
   def comma_remote(self) -> bool:
+    # note to fork maintainers, this is used for release metrics. please do not
+    # touch this to get rid of the orange startup alert. there's better ways to do that
     return self.git_normalized_origin == "github.com/commaai/openpilot"
 
   @property
