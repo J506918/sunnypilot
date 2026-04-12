@@ -98,7 +98,7 @@ class SteeringLayout(Widget):
     )
     self._rttc_toggle = toggle_item_sp(
       param="RealTimeTorqueCorrection",
-      title=lambda: tr("Real-Time Torque Correction (RTTC)"),
+      title=lambda: tr("Adaptive Torque Control (ATC)"),
       description=""
     )
 
@@ -141,7 +141,7 @@ class SteeringLayout(Widget):
       self._mads_toggle.set_description(f"<b>{self._mads_check_compat_desc}</b><br><br>{self._mads_base_desc}")
       ui_state.params.remove("EnforceTorqueControl")
       ui_state.params.remove("NeuralNetworkLateralControl")
-      ui_state.params.remove("Adaptive Torque Control (ATC)")
+      ui_state.params.remove("RealTimeTorqueCorrection")
       torque_allowed = False
 
     self._mads_toggle.action_item.set_enabled(ui_state.is_offroad())
