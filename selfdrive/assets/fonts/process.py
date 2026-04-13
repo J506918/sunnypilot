@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import hashlib
 import json
+import sys
 
 import pyray as rl
 
@@ -12,6 +14,9 @@ LANGUAGES_FILE = TRANSLATIONS_DIR / "languages.json"
 GLYPH_PADDING = 6
 EXTRA_CHARS = "–‑✓×°§•X⚙✕◀▶✔⌫⇧␣○●↳çêüñ–‑✓×°§•€£¥"
 UNIFONT_LANGUAGES = {"th", "zh-CHT", "zh-CHS", "ko", "ja"}
+
+# Hash file lives next to the generated font assets (not tracked in git)
+TRANSLATION_HASH_FILE = FONT_DIR / ".translation_hash"
 
 
 def _languages():
@@ -35,6 +40,66 @@ def _char_sets():
     (unifont if code in UNIFONT_LANGUAGES else base).update(chars)
 
   return tuple(sorted(ord(c) for c in base)), tuple(sorted(ord(c) for c in unifont))
+
+
+def compute_translation_hash() -> str:
+  """Compute a stable hash of the translation character sets used to build the font atlases.
+
+  The hash covers the sorted unique codepoints from all .po files (via _char_sets),
+  plus the set of language codes and their names, so any addition of a new language or
+  new translation string will invalidate the stored hash and trigger font regeneration.
+  """
+  base_cp, unifont_cp = _char_sets()
+  h = hashlib.sha256()
+  h.update(repr(base_cp).encode())
+  h.update(repr(unifont_cp).encode())
+  return h.hexdigest()
+
+
+def _font_outputs_exist() -> bool:
+  """Return True only when every expected .fnt and .png output file is present."""
+  fonts = sorted(FONT_DIR.glob("*.ttf")) + sorted(FONT_DIR.glob("*.otf"))
+  for font in fonts:
+    if "emoji" in font.name.lower():
+      continue
+    if not (FONT_DIR / f"{font.stem}.fnt").exists():
+      return False
+    if not (FONT_DIR / f"{font.stem}.png").exists():
+      return False
+  return True
+
+
+def ensure_fonts_up_to_date() -> None:
+  """Regenerate font atlases when the translation character set has changed or when
+  any output file is missing.  Writes a hash file after a successful build so that
+  subsequent calls are fast no-ops as long as nothing has changed.
+
+  Safe to call at every startup: the common-path cost is one hash computation plus
+  a single file read, which completes in milliseconds.
+  """
+  current_hash = compute_translation_hash()
+
+  stored_hash: str | None = None
+  if TRANSLATION_HASH_FILE.exists():
+    try:
+      stored_hash = TRANSLATION_HASH_FILE.read_text(encoding="utf-8").strip()
+    except OSError:
+      pass
+
+  if stored_hash == current_hash and _font_outputs_exist():
+    return
+
+  if stored_hash != current_hash:
+    print("Translation character set changed, regenerating font atlases...")
+  else:
+    print("Font atlas outputs missing, regenerating font atlases...")
+
+  main()
+
+  try:
+    TRANSLATION_HASH_FILE.write_text(current_hash, encoding="utf-8")
+  except OSError as e:
+    print(f"Warning: could not write font translation hash file: {e}")
 
 
 def _glyph_metrics(glyphs, rects, codepoints):
@@ -129,4 +194,7 @@ def main():
 
 
 if __name__ == "__main__":
-  raise SystemExit(main())
+  if "--ensure-up-to-date" in sys.argv:
+    ensure_fonts_up_to_date()
+  else:
+    raise SystemExit(main())
