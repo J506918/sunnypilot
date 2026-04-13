@@ -94,7 +94,7 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
         friction_ratio = max(self.car_friction, 0.01) / 0.1
         curve_scale = 1.0 / max(math.sqrt(friction_ratio), 0.5)
         curve_scale = float(np.clip(curve_scale, 0.6, 1.8))
-        self.curvature_boost_bp = [0.0, 0.002, 0.005, 0.01, 0.02, 0.04]
+        self.curvature_boost_bp = [0.0, 0.002, 0.005, 0.01, 0.02, 0.04, 0.08, 0.15]
         self.curvature_boost_v = [
             1.0,
             1.0,
@@ -102,12 +102,14 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
             1.0 + 0.15 * curve_scale,
             1.0 + 0.30 * curve_scale,
             1.0 + 0.50 * curve_scale,
+            1.0 + 0.75 * curve_scale,
+            1.0 + 1.00 * curve_scale,
         ]
 
         # -- Straight-line damping --
         # high steer ratio → twitchier on-center → damp more
         damp_base = float(np.clip(0.55 + 0.015 * self.steer_ratio, 0.6, 0.85))
-        self.straight_damp_bp = [0.0, 0.001, 0.003]
+        self.straight_damp_bp = [0.0, 0.0005, 0.001]
         self.straight_damp_v = [damp_base, 0.9, 1.0]
 
         # -- Jerk anticipation --
@@ -348,5 +350,10 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
         )
 
         # --- EPS saturation protection ---
-        eps_factor = self._compute_eps_protection(self._output_torque)
-        self._output_torque *= eps_factor
+        # Skip EPS protection during large curvature turns - sustained high torque is normal
+        if abs(self._desired_curvature) <= 0.02:
+            eps_factor = self._compute_eps_protection(self._output_torque)
+            self._output_torque *= eps_factor
+        else:
+            # Reset counter so EPS protection doesn't activate upon returning to straight
+            self.eps_saturated_count = 0
