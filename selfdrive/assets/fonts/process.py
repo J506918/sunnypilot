@@ -136,9 +136,12 @@ def compute_translation_hash() -> str:
   unifont atlases.  Any change to a tracked .po translation file that introduces
   or removes a codepoint will produce a different hash, signalling that the
   on-device font atlases need to be regenerated.
+
+  Both codepoint tuples are already sorted by _char_sets(); the explicit
+  sorted() calls here make the ordering guarantee visible at the call site.
   """
   base_cp, unifont_cp = _char_sets()
-  fingerprint = ";".join(str(cp) for cp in base_cp) + "|" + ";".join(str(cp) for cp in unifont_cp)
+  fingerprint = ";".join(str(cp) for cp in sorted(base_cp)) + "|" + ";".join(str(cp) for cp in sorted(unifont_cp))
   return hashlib.sha256(fingerprint.encode()).hexdigest()
 
 
@@ -175,7 +178,9 @@ def ensure_fonts_up_to_date() -> None:
   current_hash = compute_translation_hash()
 
   params = Params()
-  stored_hash = params.get(HASH_PARAM) or ""
+  # params.get() returns bytes; decode to str for comparison.
+  raw = params.get(HASH_PARAM)
+  stored_hash = raw.decode("utf-8") if raw is not None else ""
 
   if stored_hash == current_hash and outputs_exist:
     cloudlog.debug("font atlases are up to date, skipping regeneration")

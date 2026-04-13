@@ -111,6 +111,8 @@ def manager_init() -> None:
   # when any expected atlas output is missing.  This covers branch switches
   # (including staging → staging-zh) where the committed fonts may pre-date
   # the most recent translation changes.
+  # Errors are caught and logged so that a font-generation failure never
+  # prevents the device from booting normally.
   try:
     from openpilot.selfdrive.assets.fonts.process import ensure_fonts_up_to_date
     ensure_fonts_up_to_date()
