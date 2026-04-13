@@ -28,6 +28,17 @@ from openpilot.sunnypilot.system.params_migration import run_migration
 def manager_init() -> None:
   save_bootlog()
 
+  # Ensure font atlases are up to date with current translation content.
+  # This is a fast no-op when the translation character set has not changed.
+  # On the first boot after any branch switch or translation update the hash
+  # will be absent or mismatched, and the atlases will be regenerated before
+  # any UI process starts.
+  try:
+    from openpilot.selfdrive.assets.fonts.process import ensure_fonts_up_to_date
+    ensure_fonts_up_to_date()
+  except Exception:
+    cloudlog.exception("font atlas check/regeneration failed, continuing with existing fonts")
+
   build_metadata = get_build_metadata()
 
   params = Params()

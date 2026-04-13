@@ -93,3 +93,6 @@ SKILL.md
 !.idea/customTargets.xml
 !.idea/tools/*
 !.run/*
+
+# Runtime-generated font atlas hash (used to detect translation changes and trigger regeneration)
+selfdrive/assets/fonts/.translation_hash
