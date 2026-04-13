@@ -19,6 +19,25 @@ CRUISE_DISABLED_CHAR = '–'
 
 SET_SPEED_PERSISTENCE = 2.5  # seconds
 
+# ATC status integers (must match ATCState in rttc.py)
+ATC_STATUS_OFF = 0
+ATC_STATUS_D_LEARNING = 1
+ATC_STATUS_D_CONVERGED_A_WARMING = 2
+ATC_STATUS_FULLY_ADAPTIVE = 3
+ATC_STATUS_A_PAUSED = 4
+
+# Steering wheel tint colors per ATC state (RGBA)
+_ATC_WHEEL_COLORS = {
+  ATC_STATUS_OFF: None,                        # no tint — use standard white
+  ATC_STATUS_D_LEARNING: (255, 220, 0),        # yellow
+  ATC_STATUS_D_CONVERGED_A_WARMING: (64, 144, 255),  # blue
+  ATC_STATUS_FULLY_ADAPTIVE: (50, 205, 100),   # green
+  ATC_STATUS_A_PAUSED: (255, 140, 0),          # orange
+}
+
+# How often (in render frames) to refresh the ATC status param read
+_ATC_STATUS_REFRESH_FRAMES = 15
+
 
 @dataclass(frozen=True)
 class FontSizes:
@@ -127,6 +146,10 @@ class HudRenderer(Widget):
 
     self._set_speed_alpha_filter = FirstOrderFilter(0.0, 0.1, 1 / gui_app.target_fps)
 
+    # ATC status for steering wheel color
+    self._atc_status = ATC_STATUS_OFF
+    self._atc_status_frame_counter = 0
+
   def set_wheel_critical_icon(self, critical: bool):
     """Set the wheel icon to critical or normal state."""
     self._show_wheel_critical = critical
@@ -168,6 +191,16 @@ class HudRenderer(Widget):
     v_ego = v_ego_cluster if self.v_ego_cluster_seen else car_state.vEgo
     speed_conversion = CV.MS_TO_KPH if ui_state.is_metric else CV.MS_TO_MPH
     self.speed = max(0.0, v_ego * speed_conversion)
+
+    # Periodically refresh ATC status for steering wheel color
+    self._atc_status_frame_counter += 1
+    if self._atc_status_frame_counter >= _ATC_STATUS_REFRESH_FRAMES:
+      self._atc_status_frame_counter = 0
+      try:
+        raw = ui_state.params.get("ATCStatus", encoding="utf-8")
+        self._atc_status = int(raw) if raw else ATC_STATUS_OFF
+      except Exception:
+        self._atc_status = ATC_STATUS_OFF
 
   def _render(self, rect: rl.Rectangle) -> None:
     """Render HUD elements to the screen."""
@@ -212,8 +245,16 @@ class HudRenderer(Widget):
     dest_rect = rl.Rectangle(pos_x, pos_y, wheel_txt.width, wheel_txt.height)
     origin = (wheel_txt.width / 2, wheel_txt.height / 2)
 
-    # color and draw
-    color = rl.Color(255, 255, 255, int(self._wheel_alpha_filter.x))
+    # color and draw — apply ATC tint when RTTC is active and not in critical mode
+    alpha = int(self._wheel_alpha_filter.x)
+    if not self._show_wheel_critical and self._atc_status != ATC_STATUS_OFF:
+      rgb = _ATC_WHEEL_COLORS.get(self._atc_status)
+      if rgb is not None:
+        color = rl.Color(rgb[0], rgb[1], rgb[2], alpha)
+      else:
+        color = rl.Color(255, 255, 255, alpha)
+    else:
+      color = rl.Color(255, 255, 255, alpha)
     rl.draw_texture_pro(wheel_txt, src_rect, dest_rect, origin, rotation, color)
 
     if self._show_wheel_critical:
