@@ -2586,6 +2586,9 @@ msgstr "神经网络横向控制（NNLC）"
 msgid "Adaptive Torque Control (ATC)"
 msgstr "自适应扭矩控制（ATC）"
 
+msgid "Reset ATC Learning"
+msgstr "重置ATC学习"
+
 #: selfdrive/ui/sunnypilot/layouts/settings/trips.py
 
 msgid "ALL TIME"
