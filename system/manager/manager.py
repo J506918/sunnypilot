@@ -23,6 +23,7 @@ from openpilot.system.hardware.hw import Paths
 from openpilot.system.hardware import PC
 
 from openpilot.sunnypilot.system.params_migration import run_migration
+from openpilot.selfdrive.assets.fonts.process import ensure_fonts_up_to_date
 
 
 def manager_init() -> None:
@@ -53,6 +54,7 @@ def manager_init() -> None:
 
   if not PC:
     run_migration(params)
+    ensure_fonts_up_to_date(params)
 
   # set unset params to their default value
   for k in params.all_keys():
