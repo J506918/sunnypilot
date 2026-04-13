@@ -30,15 +30,30 @@ D_MIN_CURVATURE = 0.002          # 1/m  — ignore near-straight segments
 D_PERSIST_INTERVAL = 100         # frames between Params writes
 D_FRICTION_MIN = 0.005
 D_FRICTION_MAX = 0.30
-D_STEER_RATIO_SCALE_MIN = 0.70   # learned steer_ratio as fraction of CP value
-D_STEER_RATIO_SCALE_MAX = 1.30
+# Allow ±30% of the fingerprint-time steer_ratio — this range covers the typical
+# real-world variation from tire wear, load, and temperature across vehicles.
+D_STEER_RATIO_SCALE_MIN = 0.70   # learned steer_ratio lower bound (fraction of CP value)
+D_STEER_RATIO_SCALE_MAX = 1.30   # learned steer_ratio upper bound (fraction of CP value)
+# Bias in the friction estimator: a well-tracking car has ~0.02 normalised torque error;
+# deviations above/below this steer the EMA update toward higher/lower friction.
+D_FRICTION_BIAS = 0.02
+# Variance ratio above which D is considered unstable and A is paused
+D_INSTABILITY_VARIANCE_MULTIPLIER = 10.0
 
 # Stage A learning constants
 A_CORRECTION_RATE = 0.005        # how quickly A correction tracks error
 A_CORRECTION_MAX = 0.20          # max |additive correction| → factor in [0.8, 1.2]
-A_WEIGHT_RAMP_RATE = 0.0002      # per-frame ramp rate from 0→0.5
+A_WEIGHT_RAMP_RATE = 0.0002      # per-frame ramp rate from 0→A_WEIGHT_MAX
 A_WEIGHT_MAX = 0.50              # A's maximum blending weight
 A_WARMUP_FRAMES = 500            # frames after D convergence before A is allowed
+# During warmup, A is allowed to pre-ramp to this fraction of A_WEIGHT_MAX
+A_WARMUP_WEIGHT_FRACTION = 0.20
+# Rate to reduce A weight when D becomes unstable (multiples of ramp rate)
+A_DEGRADE_RATE_MULTIPLIER = 5.0
+# A error is pre-scaled before accumulation to keep correction values conservative
+A_ERROR_SCALE = 0.10
+# A reaches FULLY_ADAPTIVE state once its blend weight exceeds this fraction of max
+A_FULLY_ADAPTIVE_WEIGHT_FRACTION = 0.50
 
 
 class ATCState(IntEnum):
@@ -293,7 +308,7 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
         # to current value; adapt toward it using EMA.
         torque_error = abs(self._pid_log.error)
         # A small positive error → actual friction slightly higher; negative → lower
-        friction_obs = self._d_friction + D_LEARNING_RATE * (torque_error - 0.02)
+        friction_obs = self._d_friction + D_LEARNING_RATE * (torque_error - D_FRICTION_BIAS)
         friction_obs = float(np.clip(friction_obs, D_FRICTION_MIN, D_FRICTION_MAX))
         self._d_friction = (1.0 - D_LEARNING_RATE) * self._d_friction + D_LEARNING_RATE * friction_obs
         self._d_friction_window.append(self._d_friction)
@@ -338,9 +353,9 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
         if len(self._d_friction_window) >= D_WINDOW_SIZE:
             arr = np.array(self._d_friction_window)
             var = float(np.var(arr))
-            if var > D_VARIANCE_THRESHOLD * 10.0:
+            if var > D_VARIANCE_THRESHOLD * D_INSTABILITY_VARIANCE_MULTIPLIER:
                 # D drifting — degrade A weight back toward 0
-                self._a_weight = max(0.0, self._a_weight - A_WEIGHT_RAMP_RATE * 5)
+                self._a_weight = max(0.0, self._a_weight - A_WEIGHT_RAMP_RATE * A_DEGRADE_RATE_MULTIPLIER)
                 self._a_active = False
                 return
 
@@ -349,9 +364,9 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
             self._a_active = True
             self._a_weight = min(A_WEIGHT_MAX, self._a_weight + A_WEIGHT_RAMP_RATE)
         else:
-            # Still warming — allow some gentle ramp up to 10% during warmup
+            # Still warming — allow some gentle ramp up during warmup
             warmup_fraction = self._a_warmup_frames / A_WARMUP_FRAMES
-            target = A_WEIGHT_MAX * 0.2 * warmup_fraction
+            target = A_WEIGHT_MAX * A_WARMUP_WEIGHT_FRACTION * warmup_fraction
             if self._a_weight < target:
                 self._a_weight = target
 
@@ -359,7 +374,7 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
         error = self._pid_log.error  # torque-space error
         # EMA-based correction: moves toward reducing persistent error
         self._a_correction = ((1.0 - A_CORRECTION_RATE) * self._a_correction
-                              + A_CORRECTION_RATE * error * 0.1)
+                              + A_CORRECTION_RATE * error * A_ERROR_SCALE)
         self._a_correction = float(np.clip(self._a_correction, -A_CORRECTION_MAX, A_CORRECTION_MAX))
 
     # ==================================================================
@@ -385,7 +400,7 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
             if self._a_weight > 0.0:
                 return ATCState.A_PAUSED
             return ATCState.D_CONVERGED_A_WARMING
-        if self._a_active and self._a_weight >= A_WEIGHT_MAX * 0.5:
+        if self._a_active and self._a_weight >= A_WEIGHT_MAX * A_FULLY_ADAPTIVE_WEIGHT_FRACTION:
             return ATCState.FULLY_ADAPTIVE
         return ATCState.D_CONVERGED_A_WARMING
 
