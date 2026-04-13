@@ -202,6 +202,11 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"NeuralNetworkLateralControl", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"RealTimeTorqueCorrection", {PERSISTENT | BACKUP, BOOL, "0"}},
 
+    // Adaptive Torque Control (ATC) - RTTC adaptive learning
+    {"AdaptiveTorqueControlReset", {PERSISTENT, BOOL, "0"}},
+    {"ATCLearnedState", {PERSISTENT, STRING}},
+    {"ATCStatus", {PERSISTENT, INT, "0"}},
+
     // sunnylink params
     {"EnableSunnylinkUploader", {PERSISTENT | BACKUP, BOOL}},
     {"LastSunnylinkPingTime", {CLEAR_ON_MANAGER_START, INT}},

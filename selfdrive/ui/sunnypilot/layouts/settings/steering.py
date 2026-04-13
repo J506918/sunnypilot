@@ -24,6 +24,16 @@ class PanelType(IntEnum):
   TORQUE_CONTROL = 3
 
 
+# ATC status integers (must match ATCState in rttc.py)
+_ATC_STATUS_LABELS = {
+  0: tr("ATC Off"),
+  1: tr("Learning (Stage D)"),
+  2: tr("D Converged — A Warming Up"),
+  3: tr("Fully Adaptive"),
+  4: tr("A Paused — Re-stabilizing"),
+}
+
+
 class SteeringLayout(Widget):
   def __init__(self):
     super().__init__()
@@ -99,7 +109,12 @@ class SteeringLayout(Widget):
     self._rttc_toggle = toggle_item_sp(
       param="RealTimeTorqueCorrection",
       title=lambda: tr("Adaptive Torque Control (ATC)"),
-      description=""
+      description=lambda: self._atc_description(),
+    )
+    self._atc_reset_button = simple_button_item_sp(
+      button_text=lambda: tr("Reset ATC Learning"),
+      button_width=800,
+      callback=self._reset_atc_learning,
     )
 
     items = [
@@ -118,8 +133,24 @@ class SteeringLayout(Widget):
       self._nnlc_toggle,
       LineSeparatorSP(40),
       self._rttc_toggle,
+      self._atc_reset_button,
     ]
     return items
+
+  def _atc_description(self) -> str:
+    try:
+      raw = ui_state.params.get("ATCStatus", encoding="utf-8")
+      status_int = int(raw) if raw else 0
+    except Exception:
+      status_int = 0
+    status_label = _ATC_STATUS_LABELS.get(status_int, tr("Unknown"))
+    return tr("Two-stage adaptive learning for friction and steer ratio. Status: ") + status_label
+
+  def _reset_atc_learning(self):
+    try:
+      ui_state.params.put_bool("AdaptiveTorqueControlReset", True)
+    except Exception:
+      pass
 
   def _set_current_panel(self, panel: PanelType):
     self._current_panel = panel
@@ -156,6 +187,7 @@ class SteeringLayout(Widget):
     self._rttc_toggle.action_item.set_enabled(ui_state.is_offroad() and torque_allowed and not enforce_torque_enabled and not nnlc_enabled)
     self._torque_control_toggle.action_item.set_enabled(ui_state.is_offroad() and torque_allowed and not nnlc_enabled and not rttc_enabled)
     self._torque_customization_button.action_item.set_enabled(self._torque_control_toggle.action_item.get_state())
+    self._atc_reset_button.action_item.set_enabled(rttc_enabled)
 
   def _render(self, rect):
     if self._current_panel == PanelType.LANE_CHANGE:
