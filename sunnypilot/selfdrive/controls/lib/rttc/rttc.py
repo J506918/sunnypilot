@@ -241,7 +241,8 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
 
     # -- steer_ratio: update gains that are directly derived from it --
     sr = self._d_steer_ratio
-    sr_orig = max(self.steer_ratio, 1.0)  # CP fingerprint value (never zero)
+    # self.steer_ratio is guaranteed >= 1.0 from __init__ (max(CP.steerRatio, 1.0))
+    sr_orig = self.steer_ratio
 
     # Straight-line damping: base value is linearly derived from steer_ratio
     damp_base = float(np.clip(0.55 + 0.015 * sr, 0.6, 0.85))
@@ -343,10 +344,10 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
 
     # --- friction sample ---
     # Estimate observed friction from the torque error signal:
-    # when error is small (car tracking well), friction estimate is close
-    # to current value; adapt toward it using EMA.
+    # D_FRICTION_BIAS (~0.02) represents the expected normalised torque error for a
+    # well-tracking car.  When torque_error > bias, the car is understeering slightly,
+    # so we nudge friction up.  When torque_error < bias, friction is nudged down.
     torque_error = abs(self._pid_log.error)
-    # A small positive error → actual friction slightly higher; negative → lower
     friction_obs = self._d_friction + D_LEARNING_RATE * (torque_error - D_FRICTION_BIAS)
     friction_obs = float(np.clip(friction_obs, D_FRICTION_MIN, D_FRICTION_MAX))
     self._d_friction = (1.0 - D_LEARNING_RATE) * self._d_friction + D_LEARNING_RATE * friction_obs
