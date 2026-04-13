@@ -105,6 +105,18 @@ def manager_init() -> None:
                        dirty=build_metadata.openpilot.is_dirty,
                        device=HARDWARE.get_device_type())
 
+  # Ensure font atlases are up to date with the current branch's translations.
+  # Regeneration is triggered when the stored translation-codepoint fingerprint
+  # differs from the fingerprint computed from the checked-out .po files, or
+  # when any expected atlas output is missing.  This covers branch switches
+  # (including staging → staging-zh) where the committed fonts may pre-date
+  # the most recent translation changes.
+  try:
+    from openpilot.selfdrive.assets.fonts.process import ensure_fonts_up_to_date
+    ensure_fonts_up_to_date()
+  except Exception:
+    cloudlog.exception("font atlas check/regeneration failed during manager init")
+
   # preimport all processes
   for p in managed_processes.values():
     p.prepare()
