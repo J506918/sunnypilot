@@ -2079,9 +2079,14 @@ msgstr "重置校准"
 msgid "default model"
 msgstr "默认模型"
 
+msgid "checking..."
+msgstr "检查中..."
+
 msgid "downloading..."
 msgstr "下载中..."
 
+msgid "finalizing update..."
+msgstr "正在完成更新..."
 
 #: selfdrive/ui/sunnypilot/layouts/settings/visuals.py
 

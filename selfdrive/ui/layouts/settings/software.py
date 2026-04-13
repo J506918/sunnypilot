@@ -16,6 +16,7 @@ if gui_app.sunnypilot_ui():
 
 # TODO: remove this. updater fails to respond on startup if time is not correct
 UPDATED_TIMEOUT = 10  # seconds to wait for updated to respond
+UPDATED_ACTIVE_TIMEOUT = 120  # seconds before treating a stuck non-idle UpdaterState as stale
 
 # Mapping updater internal states to translated display strings
 STATE_TO_DISPLAY_TEXT = {
@@ -66,6 +67,9 @@ class SoftwareLayout(Widget):
     # Track waiting-for-updater transition to avoid brief re-enable while still idle
     self._waiting_for_updater = False
     self._waiting_start_ts: float = 0.0
+    # Track how long UpdaterState has been non-idle (to detect stale/stuck state)
+    self._non_idle_start_ts: float | None = None
+    self._updater_stuck: bool = False
 
     # Branch switcher
     self._branch_btn = button_item(lambda: tr("Target Branch"), lambda: tr("SELECT"), callback=self._on_select_branch)
@@ -105,6 +109,19 @@ class SoftwareLayout(Widget):
     failed_count = ui_state.params.get("UpdateFailedCount") or 0
     fetch_available = ui_state.params.get_bool("UpdaterFetchAvailable")
     update_available = ui_state.params.get_bool("UpdateAvailable")
+
+    # Guard against a stuck non-idle UpdaterState (e.g. stale param after a crash or
+    # the updater hanging on a network call with no timeout).
+    if updater_state != "idle":
+      if self._non_idle_start_ts is None:
+        self._non_idle_start_ts = time.monotonic()
+      if not self._updater_stuck and (time.monotonic() - self._non_idle_start_ts > UPDATED_ACTIVE_TIMEOUT):
+        self._updater_stuck = True
+      if self._updater_stuck:
+        updater_state = "idle"
+    else:
+      self._non_idle_start_ts = None
+      self._updater_stuck = False
 
     if updater_state != "idle":
       # Updater responded
