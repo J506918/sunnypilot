@@ -85,7 +85,7 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     # =============================================================
     # All car-specific params from CP — set at fingerprint time
     # =============================================================
-    self.steer_ratio = CP.steerRatio                                    # e.g. 13.7 ~ 17.0
+    self.steer_ratio = max(CP.steerRatio, 1.0)                          # e.g. 13.7 ~ 17.0 (guard against zero)
     self.steer_actuator_delay = CP.steerActuatorDelay                   # e.g. 0.08 ~ 0.30
     self.car_mass = CP.mass                                             # e.g. 1200 ~ 2500 kg
     self.wheelbase = CP.wheelbase                                       # e.g. 2.5 ~ 3.0 m
@@ -314,6 +314,13 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
   # ==================================================================
   # Stage D: adaptive parameter learning
   # ==================================================================
+  @staticmethod
+  def _window_variance(window: deque, min_size: int) -> float:
+    """Return variance of window contents; return inf if window is too small."""
+    if len(window) < min_size:
+      return float("inf")
+    return float(np.var(np.array(window)))
+
   def _should_learn_d(self, CS) -> bool:
     if CS.vEgo < D_MIN_SPEED:
       return False
@@ -363,16 +370,10 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     # --- convergence check: BOTH friction AND steer_ratio must be stable ---
     # D is only considered converged when both learned parameters have settled.
     # If either signal becomes unstable, convergence is lost and Stage A must pause.
-    fr_converged = False
-    sr_converged = False
-
-    if len(self._d_friction_window) >= D_WINDOW_SIZE:
-      fr_var = float(np.var(np.array(self._d_friction_window)))
-      fr_converged = fr_var < D_VARIANCE_THRESHOLD
-
-    if len(self._d_steer_ratio_window) >= D_WINDOW_SIZE:
-      sr_var = float(np.var(np.array(self._d_steer_ratio_window)))
-      sr_converged = sr_var < D_SR_VARIANCE_THRESHOLD
+    fr_var = self._window_variance(self._d_friction_window, D_WINDOW_SIZE)
+    sr_var = self._window_variance(self._d_steer_ratio_window, D_WINDOW_SIZE)
+    fr_converged = fr_var < D_VARIANCE_THRESHOLD
+    sr_converged = sr_var < D_SR_VARIANCE_THRESHOLD
 
     was_converged = self._d_converged
     self._d_converged = fr_converged and sr_converged
@@ -397,15 +398,10 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     self._a_warmup_frames += 1
 
     # Check if D has become unstable again (high variance on either signal → pause A)
-    d_unstable = False
-    if len(self._d_friction_window) >= D_WINDOW_SIZE:
-      fr_var = float(np.var(np.array(self._d_friction_window)))
-      if fr_var > D_VARIANCE_THRESHOLD * D_INSTABILITY_VARIANCE_MULTIPLIER:
-        d_unstable = True
-    if len(self._d_steer_ratio_window) >= D_WINDOW_SIZE:
-      sr_var = float(np.var(np.array(self._d_steer_ratio_window)))
-      if sr_var > D_SR_VARIANCE_THRESHOLD * D_INSTABILITY_VARIANCE_MULTIPLIER:
-        d_unstable = True
+    fr_var = self._window_variance(self._d_friction_window, D_WINDOW_SIZE)
+    sr_var = self._window_variance(self._d_steer_ratio_window, D_WINDOW_SIZE)
+    d_unstable = (fr_var > D_VARIANCE_THRESHOLD * D_INSTABILITY_VARIANCE_MULTIPLIER or
+                  sr_var > D_SR_VARIANCE_THRESHOLD * D_INSTABILITY_VARIANCE_MULTIPLIER)
 
     if d_unstable:
       # D drifting — degrade A weight back toward 0
