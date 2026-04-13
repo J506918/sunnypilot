@@ -45,9 +45,11 @@ def _char_sets():
 def compute_translation_hash() -> str:
   """Compute a stable hash of the translation character sets used to build the font atlases.
 
-  The hash covers the sorted unique codepoints from all .po files (via _char_sets),
-  plus the set of language codes and their names, so any addition of a new language or
-  new translation string will invalidate the stored hash and trigger font regeneration.
+  The hash covers the sorted unique codepoints derived from all .po files (via
+  _char_sets).  Because _char_sets incorporates every language's display name
+  characters as well as all translated string characters, any addition of a new
+  language or new translation string that introduces new codepoints will change
+  the hash and trigger font regeneration.
   """
   base_cp, unifont_cp = _char_sets()
   h = hashlib.sha256()
