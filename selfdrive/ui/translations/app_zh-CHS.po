@@ -2587,7 +2587,25 @@ msgid "Adaptive Torque Control (ATC)"
 msgstr "自适应扭矩控制（ATC）"
 
 msgid "Reset ATC Learning"
-msgstr "重置ATC学习"
+msgstr "重置 ATC 学习"
+
+msgid "ATC Off"
+msgstr "ATC 已关闭"
+
+msgid "Learning (Stage D)"
+msgstr "学习中（阶段 D）"
+
+msgid "D Converged — A Warming Up"
+msgstr "D 已收敛 —— A 预热中"
+
+msgid "Fully Adaptive"
+msgstr "完全自适应"
+
+msgid "A Paused — Re-stabilizing"
+msgstr "A 已暂停 —— 重新稳定中"
+
+msgid "Two-stage adaptive learning for friction and steer ratio. Status: "
+msgstr "针对摩擦与转向比的两阶段自适应学习。状态："
 
 #: selfdrive/ui/sunnypilot/layouts/settings/trips.py
 
