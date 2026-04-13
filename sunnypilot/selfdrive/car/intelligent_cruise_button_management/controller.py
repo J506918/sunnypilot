@@ -17,7 +17,8 @@ SendButtonState = custom.IntelligentCruiseButtonManagement.SendButtonState
 
 ALLOWED_SPEED_THRESHOLD = 1.8  # m/s, ~4 MPH
 HYST_GAP = 0.0  # currently disabled; TODO-SP: might need to be brand-specific
-INACTIVE_TIMER = 0.4
+INACTIVE_TIMER = 1.5
+MANUAL_BUTTON_COOLDOWN = 1.5  # seconds to wait after manual button press before ICBM resumes
 
 
 SEND_BUTTONS = {
@@ -44,6 +45,7 @@ class IntelligentCruiseButtonManagement:
     self.is_metric = False
 
     self.cruise_button_timers = CRUISE_BUTTON_TIMER
+    self.manual_button_cooldown = 0
 
   @property
   def v_cruise_equal(self) -> bool:
@@ -111,7 +113,15 @@ class IntelligentCruiseButtonManagement:
     ready = CC.enabled and not CC.cruiseControl.override and not CC.cruiseControl.cancel and not CC.cruiseControl.resume
     button_pressed = any(self.cruise_button_timers[k] > 0 for k in self.cruise_button_timers)
 
-    self.is_ready = ready and not button_pressed
+    # When a manual button press is detected, start/reset the cooldown timer
+    if button_pressed:
+      self.manual_button_cooldown = int(MANUAL_BUTTON_COOLDOWN / DT_CTRL)
+
+    # Count down the cooldown timer each frame
+    self.manual_button_cooldown = max(0, self.manual_button_cooldown - 1)
+
+    # ICBM is only ready when the system is enabled, no button is pressed, and the cooldown has expired
+    self.is_ready = ready and not button_pressed and self.manual_button_cooldown == 0
 
   def run(self, CS: car.CarState, CC: car.CarControl, LP_SP: custom.LongitudinalPlanSP, is_metric: bool) -> None:
     if self.CP_SP.pcmCruiseSpeed:
