@@ -113,7 +113,9 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     self._a_active = False        # True only after warmup completes
 
     self._atc_state = ATCState.OFF
-    self._status_counter = 0      # throttle Params writes for status
+    self._status_counter = 0      # throttle Params writes for status (1Hz = every 100 frames)
+    self._reset_check_counter = 0  # throttle Params reads for reset button (1Hz = every 100 frames)
+    self._learn_check_counter = 0  # throttle Stage D/A variance checks (10Hz = every 10 frames)
 
     # Restore learned state from persistent storage
     self._load_learned_state()
@@ -338,11 +340,11 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
       return False
     return True
 
-  def _update_stage_d(self, CS):
+  def _update_stage_d(self, CS, run_variance_check: bool = True):
     if not self._should_learn_d(CS):
       return
 
-    # --- friction sample ---
+    # --- friction sample (EMA, runs every frame for smooth learning) ---
     # Estimate observed friction from the torque error signal:
     # D_FRICTION_BIAS (~0.02) represents the expected normalised torque error for a
     # well-tracking car.  When torque_error > bias, the car is understeering slightly,
@@ -353,7 +355,7 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     self._d_friction = (1.0 - D_LEARNING_RATE) * self._d_friction + D_LEARNING_RATE * friction_obs
     self._d_friction_window.append(self._d_friction)
 
-    # --- steer_ratio sample ---
+    # --- steer_ratio sample (EMA, runs every frame for smooth learning) ---
     # Use the ratio of desired vs actual yaw rate as a proxy for steer_ratio error.
     # Gated on sufficient desired yaw to avoid division noise near straight.
     desired_yaw = (self._desired_curvature + self.curvature_bias) * CS.vEgo
@@ -368,9 +370,12 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
       self._d_steer_ratio = (1.0 - D_LEARNING_RATE) * self._d_steer_ratio + D_LEARNING_RATE * sr_obs
       self._d_steer_ratio_window.append(self._d_steer_ratio)
 
-    # --- convergence check: BOTH friction AND steer_ratio must be stable ---
+    # --- convergence check: throttled to 10Hz to avoid np.var array copy every frame ---
     # D is only considered converged when both learned parameters have settled.
     # If either signal becomes unstable, convergence is lost and Stage A must pause.
+    if not run_variance_check:
+      return
+
     fr_var = self._window_variance(self._d_friction_window, D_WINDOW_SIZE)
     sr_var = self._window_variance(self._d_steer_ratio_window, D_WINDOW_SIZE)
     fr_converged = fr_var < D_VARIANCE_THRESHOLD
@@ -392,17 +397,19 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
   # Warmup phase (frames < A_WARMUP_FRAMES): learn-only, no output effect.
   # Active phase: weight ramps up and correction is applied to output.
   # ==================================================================
-  def _update_stage_a(self, CS):
+  def _update_stage_a(self, CS, run_variance_check: bool = True):
     if not self._d_converged:
       return
 
     self._a_warmup_frames += 1
 
-    # Check if D has become unstable again (high variance on either signal → pause A)
-    fr_var = self._window_variance(self._d_friction_window, D_WINDOW_SIZE)
-    sr_var = self._window_variance(self._d_steer_ratio_window, D_WINDOW_SIZE)
-    d_unstable = (fr_var > D_VARIANCE_THRESHOLD * D_INSTABILITY_VARIANCE_MULTIPLIER or
-                  sr_var > D_SR_VARIANCE_THRESHOLD * D_INSTABILITY_VARIANCE_MULTIPLIER)
+    # Check if D has become unstable again (throttled to 10Hz to avoid np.var array copy every frame)
+    if run_variance_check:
+      fr_var = self._window_variance(self._d_friction_window, D_WINDOW_SIZE)
+      sr_var = self._window_variance(self._d_steer_ratio_window, D_WINDOW_SIZE)
+      self._d_unstable = (fr_var > D_VARIANCE_THRESHOLD * D_INSTABILITY_VARIANCE_MULTIPLIER or
+                          sr_var > D_SR_VARIANCE_THRESHOLD * D_INSTABILITY_VARIANCE_MULTIPLIER)
+    d_unstable = getattr(self, '_d_unstable', False)
 
     if d_unstable:
       # D drifting — degrade A weight back toward 0
@@ -453,7 +460,7 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
 
   def _update_atc_status(self):
     self._status_counter += 1
-    if self._status_counter < 10:
+    if self._status_counter < 100:  # 1Hz: write UI status once per second, not 10x per second
       return
     self._status_counter = 0
     new_state = self._compute_atc_state()
@@ -580,12 +587,15 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     if not self._rttc_enabled:
       return
 
-    # --- Check for reset request ---
-    try:
-      if self.params.get_bool("AdaptiveTorqueControlReset"):
-        self._reset_learned_state()
-    except Exception:
-      pass
+    # --- Check for reset request (throttled to 1Hz to avoid flock I/O on every frame) ---
+    self._reset_check_counter += 1
+    if self._reset_check_counter >= 100:
+      self._reset_check_counter = 0
+      try:
+        if self.params.get_bool("AdaptiveTorqueControlReset"):
+          self._reset_learned_state()
+      except Exception:
+        pass
 
     # --- roll & pitch ---
     roll = params.roll
@@ -625,8 +635,12 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     straight_damp = self._get_straight_damping()
     self._pid_log.error = base_error * curvature_boost * straight_damp
 
-    # --- Stage D: adaptive parameter learning (updates after error is set) ---
-    self._update_stage_d(CS)
+    # --- Stage D: adaptive parameter learning (throttled to 10Hz; EMA learning is slow) ---
+    self._learn_check_counter += 1
+    _run_learn = (self._learn_check_counter >= 10)
+    if _run_learn:
+      self._learn_check_counter = 0
+    self._update_stage_d(CS, run_variance_check=_run_learn)
 
     # --- Feedforward ---
     self._ff = self.torque_from_lateral_accel_in_torque_space(
@@ -678,7 +692,7 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
 
     # --- Stage A: adaptive correction layer (after D learning, after EPS protection) ---
     # Warmup: learn-only (no output). Active: weight ramps up, output applied.
-    self._update_stage_a(CS)
+    self._update_stage_a(CS, run_variance_check=_run_learn)
     self._apply_stage_a_correction()
 
     # --- Persist learned state periodically ---

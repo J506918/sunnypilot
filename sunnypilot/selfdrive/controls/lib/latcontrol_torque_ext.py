@@ -31,6 +31,7 @@ class LatControlTorqueExt(NeuralNetworkLateralControl, LatControlTorqueExtOverri
   def update(self, CS, VM, pid, params, ff, pid_log, setpoint, measurement, calibrated_pose, roll_compensation,
              desired_lateral_accel, actual_lateral_accel, lateral_accel_deadzone, gravity_adjusted_lateral_accel,
              desired_curvature, actual_curvature, steer_limited_by_safety, output_torque):
+    # --- Populate shared input state for NNLC (self) ---
     self._ff = ff
     self._pid = pid
     self._pid_log = pid_log
@@ -46,28 +47,33 @@ class LatControlTorqueExt(NeuralNetworkLateralControl, LatControlTorqueExtOverri
     self._steer_limited_by_safety = steer_limited_by_safety
     self._output_torque = output_torque
 
-    self.update_calculations(CS, VM, desired_lateral_accel)
-
     if self._rttc._rttc_enabled:
-      self._rttc._ff = self._ff
-      self._rttc._pid = self._pid
-      self._rttc._pid_log = self._pid_log
-      self._rttc._setpoint = self._setpoint
-      self._rttc._measurement = self._measurement
-      self._rttc._roll_compensation = self._roll_compensation
-      self._rttc._lateral_accel_deadzone = self._lateral_accel_deadzone
-      self._rttc._desired_lateral_accel = self._desired_lateral_accel
-      self._rttc._actual_lateral_accel = self._actual_lateral_accel
-      self._rttc._desired_curvature = self._desired_curvature
-      self._rttc._actual_curvature = self._actual_curvature
-      self._rttc._gravity_adjusted_lateral_accel = self._gravity_adjusted_lateral_accel
-      self._rttc._steer_limited_by_safety = self._steer_limited_by_safety
-      self._rttc._output_torque = self._output_torque
+      # --- ATC/RTTC path: fully isolated from NNLC state ---
+      # update_calculations is called ONLY on the RTTC instance, using its own
+      # internal state. The NNLC (self) update_calculations is intentionally
+      # skipped to prevent state pollution between the two controllers.
+      self._rttc._ff = ff
+      self._rttc._pid = pid
+      self._rttc._pid_log = pid_log
+      self._rttc._setpoint = setpoint
+      self._rttc._measurement = measurement
+      self._rttc._roll_compensation = roll_compensation
+      self._rttc._lateral_accel_deadzone = lateral_accel_deadzone
+      self._rttc._desired_lateral_accel = desired_lateral_accel
+      self._rttc._actual_lateral_accel = actual_lateral_accel
+      self._rttc._desired_curvature = desired_curvature
+      self._rttc._actual_curvature = actual_curvature
+      self._rttc._gravity_adjusted_lateral_accel = gravity_adjusted_lateral_accel
+      self._rttc._steer_limited_by_safety = steer_limited_by_safety
+      self._rttc._output_torque = output_torque
       self._rttc.update_calculations(CS, VM, desired_lateral_accel)
       self._rttc.update_rttc_feedforward(CS, params, calibrated_pose)
-      self._pid_log = self._rttc._pid_log
-      self._output_torque = self._rttc._output_torque
+      return self._rttc._pid_log, self._rttc._output_torque
     else:
+      # --- NNLC path: only runs when ATC is disabled ---
+      # update_calculations is called on NNLC (self) only in this branch,
+      # ensuring NNLC internal state (lateral jerk, lookahead, etc.) is never
+      # dirtied by ATC runs.
+      self.update_calculations(CS, VM, desired_lateral_accel)
       self.update_neural_network_feedforward(CS, params, calibrated_pose)
-
-    return self._pid_log, self._output_torque
+      return self._pid_log, self._output_torque

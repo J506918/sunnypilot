@@ -124,13 +124,17 @@ class Sidebar(Widget, SidebarSP):
 
   def _update_temperature_status(self, device_state):
     thermal_status = device_state.thermalStatus
+    max_temp = device_state.maxTempC
+
+    # Show actual temperature value instead of grade labels
+    temp_str = f"{max_temp:.0f}\u00b0C"
 
     if thermal_status == ThermalStatus.green:
-      self._temp_status.update(tr_noop("TEMP"), tr_noop("GOOD"), Colors.GOOD)
+      self._temp_status.update(tr_noop("TEMP"), temp_str, Colors.GOOD)
     elif thermal_status == ThermalStatus.yellow:
-      self._temp_status.update(tr_noop("TEMP"), tr_noop("OK"), Colors.WARNING)
+      self._temp_status.update(tr_noop("TEMP"), temp_str, Colors.WARNING)
     else:
-      self._temp_status.update(tr_noop("TEMP"), tr_noop("HIGH"), Colors.DANGER)
+      self._temp_status.update(tr_noop("TEMP"), temp_str, Colors.DANGER)
 
   def _update_connection_status(self, device_state):
     last_ping = device_state.lastAthenaPingTime
