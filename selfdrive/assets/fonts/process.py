@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import hashlib
 import json
+import pyray as rl
 
 FONT_DIR = Path(__file__).resolve().parent
 SELFDRIVE_DIR = FONT_DIR.parents[1]
