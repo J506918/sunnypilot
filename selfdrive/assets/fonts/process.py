@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import hashlib
 import json
+
+import pyray as rl
 
 FONT_DIR = Path(__file__).resolve().parent
 SELFDRIVE_DIR = FONT_DIR.parents[1]
@@ -86,7 +87,6 @@ def _write_bmfont(path: Path, font_size: int, face: str, atlas_name: str, line_h
 
 
 def _process_font(font_path: Path, codepoints: tuple[int, ...]):
-  import pyray as rl
   print(f"Processing {font_path.name}...")
 
   font_size = {
@@ -115,59 +115,6 @@ def _process_font(font_path: Path, codepoints: tuple[int, ...]):
     raise RuntimeError("Failed to export atlas image")
 
   _write_bmfont(FONT_DIR / f"{font_path.stem}.fnt", font_size, font_path.stem, atlas_name, line_height, base, (image.width, image.height), entries)
-
-
-def compute_translation_fingerprint() -> str:
-  """Return a SHA-256 hex digest of all translation input files used for font generation.
-
-  Hashes languages.json, every app_*.po file referenced by it, and the EXTRA_CHARS
-  constant so that any change to the codepoint inputs invalidates the fingerprint.
-  """
-  h = hashlib.sha256()
-  if LANGUAGES_FILE.exists():
-    h.update(LANGUAGES_FILE.read_bytes())
-  for code in sorted(_languages().values()):
-    po_path = TRANSLATIONS_DIR / f"app_{code}.po"
-    if po_path.exists():
-      h.update(po_path.read_bytes())
-  h.update(EXTRA_CHARS.encode("utf-8"))
-  return h.hexdigest()
-
-
-def ensure_fonts_up_to_date(params) -> None:
-  """Regenerate font atlases when translation inputs have changed or outputs are missing.
-
-  Compares the SHA-256 fingerprint of the current translation source files against the
-  value stored in the ``LastFontSourceTranslationHash`` param (which records the
-  translation fingerprint used for the last successful font generation).  Regenerates
-  all fonts if the fingerprint differs or if any expected output file is absent, then
-  updates the stored fingerprint on success.
-  """
-  from openpilot.common.swaglog import cloudlog
-
-  fonts = [f for f in sorted(FONT_DIR.glob("*.ttf")) + sorted(FONT_DIR.glob("*.otf"))
-           if "emoji" not in f.name.lower()]
-  fonts_missing = any(
-    not (FONT_DIR / f"{font.stem}.fnt").exists() or not (FONT_DIR / f"{font.stem}.png").exists()
-    for font in fonts
-  )
-
-  current_fp = compute_translation_fingerprint()
-  stored_fp = params.get("LastFontSourceTranslationHash")
-
-  if not fonts_missing and stored_fp == current_fp:
-    cloudlog.info("ensure_fonts_up_to_date: fonts are up to date with current translation inputs")
-    return
-
-  reason = "font outputs missing" if fonts_missing else "translation inputs changed"
-  cloudlog.warning(f"ensure_fonts_up_to_date: regenerating fonts ({reason})")
-
-  try:
-    main()
-    params.put("LastFontSourceTranslationHash", current_fp)
-    cloudlog.info("ensure_fonts_up_to_date: regeneration complete, LastFontSourceTranslationHash updated")
-  except Exception:
-    cloudlog.exception("ensure_fonts_up_to_date: font regeneration failed")
 
 
 def main():
