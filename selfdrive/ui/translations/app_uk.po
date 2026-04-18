@@ -30,7 +30,7 @@ msgstr "Підключення LTE 24/7"
 
 #: openpilot/selfdrive/ui/layouts/sidebar.py
 msgid "2G"
-msgstr "2G"
+msgstr ""
 
 #: openpilot/selfdrive/ui/layouts/sidebar.py
 msgid "3G"
