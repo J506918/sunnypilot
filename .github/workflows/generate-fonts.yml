@@ -1,1 +1,42 @@
-name: Font Generation Workflow\n\non: push:\n  branches:\n    - staging-zh\n    - staging-C3XL\n\njobs:\n  font_generation:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout code\n        uses: actions/checkout@v2\n\n      - name: Setup Python 3.12\n        uses: actions/setup-python@v2\n        with:\n          python-version: '3.12'\n\n      - name: Install pyray dependency\n        run: |\n          python -m pip install --upgrade pip\n          pip install pyray\n\n      - name: Run font generation script\n        run: python selfdrive/assets/fonts/process.py\n\n      - name: Commit generated files\n        run: |\n          git config --local user.email 'action@github.com'\n          git config --local user.name 'GitHub Action'\n          git add selfdrive/assets/fonts/*.png selfdrive/assets/fonts/*.fnt\n          git commit -m 'Generated fonts' || echo 'No changes to commit'\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n\n      - name: Push changes\n        run: git push origin HEAD:staging-zh\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n
+name: Generate Fonts
+
+on:
+  push:
+    branches:
+      - staging-zh
+      - staging-C3XL
+    paths:
+      - 'selfdrive/ui/translations/*.po'
+    paths-ignore:
+      - 'selfdrive/assets/fonts/*.png'
+      - 'selfdrive/assets/fonts/*.fnt'
+
+jobs:
+  generate_fonts:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.12'
+
+      - name: Install pyray dependency
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyray
+
+      - name: Run font generation script
+        run: |
+          python selfdrive/assets/fonts/process.py
+
+      - name: Commit and push generated font files
+        run: |
+          git config --local user.email 'action@github.com'
+          git config --local user.name 'GitHub Action'
+          git add selfdrive/assets/fonts/*
+          git commit -m 'Update generated font files' || echo 'No changes to commit'
+          git push
