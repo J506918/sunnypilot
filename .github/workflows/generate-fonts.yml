@@ -1,0 +1,21 @@
+# Auto-generate Fonts Workflow
+
+name: Generate Fonts
+
+on:
+  push:
+    branches:
+      - staging-zh
+      - staging-C3XL
+
+jobs:
+  generate-fonts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Generate Fonts
+        run: |
+          echo 'Generating fonts...'
+          # Add your font generation commands here
