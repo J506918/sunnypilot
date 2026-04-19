@@ -1,6 +1,6 @@
 name: Generate Fonts
 
-On:
+on:
   push:
     branches:
       - staging-zh
