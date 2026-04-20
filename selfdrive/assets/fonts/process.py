@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import hashlib
 from pathlib import Path
 import json
 import pyray as rl
@@ -125,6 +126,75 @@ def main():
     glyphs = unifont_cp if font.stem.lower().startswith("unifont") else base_cp
     _process_font(font, glyphs)
   return 0
+
+
+def compute_translation_hash() -> str:
+  """Compute a SHA-256 fingerprint of the codepoint sets used to generate all font atlases.
+
+  The fingerprint captures the full set of codepoints that go into the base and
+  unifont atlases.  Any change to a tracked .po translation file that introduces
+  or removes a codepoint will produce a different hash, signalling that the
+  on-device font atlases need to be regenerated.
+
+  Both codepoint tuples are already sorted by _char_sets(); the explicit
+  sorted() calls here make the ordering guarantee visible at the call site.
+  """
+  base_cp, unifont_cp = _char_sets()
+  fingerprint = ";".join(str(cp) for cp in sorted(base_cp)) + "|" + ";".join(str(cp) for cp in sorted(unifont_cp))
+  return hashlib.sha256(fingerprint.encode()).hexdigest()
+
+
+def ensure_fonts_up_to_date() -> None:
+  """Regenerate font atlases when the translation character set has changed.
+
+  Compares the SHA-256 fingerprint of the current branch's translation
+  codepoints (the *repository* translation fingerprint) against the fingerprint
+  that was recorded the last time fonts were generated on this device (the
+  *local* font-generation fingerprint stored in Params).  Regeneration is
+  triggered when:
+    - the two fingerprints differ, OR
+    - any expected .fnt / .png output file is missing.
+
+  After a successful regeneration the stored fingerprint is updated
+  automatically so subsequent boots skip the regeneration step unless
+  translations change again.  No git auto-commit is performed.
+  """
+  try:
+    from openpilot.common.params import Params
+    from openpilot.common.swaglog import cloudlog
+  except ImportError:
+    return
+
+  HASH_PARAM = "FontGenerationHash"
+
+  fonts = [f for f in (sorted(FONT_DIR.glob("*.ttf")) + sorted(FONT_DIR.glob("*.otf")))
+           if "emoji" not in f.name.lower()]
+  outputs_exist = all(
+    (FONT_DIR / f"{f.stem}.fnt").exists() and (FONT_DIR / f"{f.stem}.png").exists()
+    for f in fonts
+  )
+
+  current_hash = compute_translation_hash()
+
+  params = Params()
+  # params.get() returns bytes; decode to str for comparison.
+  raw = params.get(HASH_PARAM)
+  stored_hash = raw.decode("utf-8") if raw is not None else ""
+
+  if stored_hash == current_hash and outputs_exist:
+    cloudlog.debug("font atlases are up to date, skipping regeneration")
+    return
+
+  cloudlog.info(
+    f"font atlas regeneration needed — "
+    f"hash_match={stored_hash == current_hash}, outputs_exist={outputs_exist}"
+  )
+  try:
+    main()
+    params.put(HASH_PARAM, current_hash)
+    cloudlog.info("font atlas regeneration complete")
+  except Exception:
+    cloudlog.exception("font atlas regeneration failed")
 
 
 if __name__ == "__main__":
