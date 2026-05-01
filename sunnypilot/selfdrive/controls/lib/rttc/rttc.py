@@ -21,6 +21,23 @@ from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_ext_base impo
 LOW_SPEED_X = [0, 10, 20, 30]
 LOW_SPEED_Y = [12, 3, 1, 0]
 
+# Heading correction speed range: scale is 0 at low end, 1.0 at high end.
+# Previously [3.0, 15.0] — at 5 m/s (18 km/h) only ~13 % of the heading
+# correction feedforward was applied, giving little turn-in authority during
+# low-speed urban 90-degree turns.  New values give ~50 % at 5 m/s and full
+# correction from 10 m/s onward, matching typical city / suburban speed ranges.
+HEADING_CORRECTION_MIN_SPEED = 2.0   # m/s — speed at which scale = 0
+HEADING_CORRECTION_MAX_SPEED = 10.0  # m/s — speed at which scale = 1
+
+# Jerk anticipation exit-phase damping factor.
+# During corner exit the model predicts future lateral accel returning to 0,
+# producing a large negative jerk feedforward (jerk_ff < 0) that aggressively
+# withdraws torque while the car is still mid-corner.  This causes the observed
+# late-but-fast snap-back and subsequent body oscillation.  Damping negative jerk
+# to this fraction (35 %) while keeping entry-phase gain intact gives a much
+# smoother, slower unwind without degrading turn-in performance.
+EXIT_JERK_DAMPING_FACTOR = 0.35
+
 # Stage D learning constants
 D_LEARNING_RATE = 0.02           # EMA learning rate for friction / steer_ratio
 D_WINDOW_SIZE = 50               # rolling window for variance / convergence check
@@ -526,7 +543,7 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     # Previously [3.0, 15.0]: at 5 m/s (18 km/h) only ~13 % of heading correction
     # was applied, severely limiting turn-in authority in urban 90-degree turns.
     # New range [2.0, 10.0]: at 5 m/s → ~50 %, full correction from 10 m/s onward.
-    speed_scale = float(np.interp(CS.vEgo, [2.0, 10.0], [0.0, 1.0]))
+    speed_scale = float(np.interp(CS.vEgo, [HEADING_CORRECTION_MIN_SPEED, HEADING_CORRECTION_MAX_SPEED], [0.0, 1.0]))
     return self.heading_error_gain * heading_error * speed_scale
 
   # ==================================================================
@@ -579,7 +596,7 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     # exactly when the car is still mid-corner, producing the observed fast
     # snap-back and subsequent body oscillation.
     if filtered_jerk < 0:
-      filtered_jerk *= 0.35
+      filtered_jerk *= EXIT_JERK_DAMPING_FACTOR
 
     return self.jerk_anticipation_gain * filtered_jerk
 

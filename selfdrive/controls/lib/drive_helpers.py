@@ -17,8 +17,8 @@ MAX_LATERAL_ACCEL_NO_ROLL = 3.0  # m/s^2
 # translates to very little allowable curvature and prevents completing tight
 # 90-degree turns (e.g. radius ~7 m needs 3.5 m/s² at 5 m/s).
 # We relax the cap at low speed only, returning to the EU value above 10 m/s.
-_LOW_SPEED_LAT_ACCEL_BP = [5.0, 10.0]   # m/s
-_LOW_SPEED_LAT_ACCEL_V  = [3.5, 3.0]   # m/s²
+_LOW_SPEED_LAT_ACCEL_SPEEDS  = [5.0, 10.0]   # m/s
+_LOW_SPEED_LAT_ACCEL_LIMITS  = [3.5, 3.0]    # m/s²
 
 
 def clamp(val, min_val, max_val):
@@ -41,7 +41,7 @@ def clip_curvature(v_ego, prev_curvature, new_curvature, roll) -> tuple[float, b
   # Speed-dependent lateral acceleration limit: at low urban speeds the standard
   # 3.0 m/s² cap is too restrictive for tight 90-degree turns; relax it slightly
   # below 10 m/s while keeping the EU value at highway speed.
-  max_lat_accel_no_roll = float(np.interp(v_ego, _LOW_SPEED_LAT_ACCEL_BP, _LOW_SPEED_LAT_ACCEL_V))
+  max_lat_accel_no_roll = float(np.interp(v_ego, _LOW_SPEED_LAT_ACCEL_SPEEDS, _LOW_SPEED_LAT_ACCEL_LIMITS))
   max_lat_accel = max_lat_accel_no_roll + roll_compensation
   min_lat_accel = -max_lat_accel_no_roll + roll_compensation
   new_curvature, limited_accel = clamp(new_curvature, min_lat_accel / v_ego ** 2, max_lat_accel / v_ego ** 2)
