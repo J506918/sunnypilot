@@ -495,13 +495,18 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
       self.curvature_bias = 0.0
       return
 
-    if CS.vEgo < 5.0:
+    # Previously hard-disabled below 5.0 m/s.  Instead, use a proportional
+    # speed scale so that position correction contributes at low urban speeds
+    # (e.g. during a 90-degree turn at 15 km/h) while fading to zero only
+    # when the vehicle is nearly stopped.
+    position_speed_scale = float(np.interp(CS.vEgo, [2.0, 6.0], [0.0, 1.0]))
+    if position_speed_scale <= 0.0:
       self.curvature_bias = 0.0
       return
 
     raw_position_error = float(self.model_v2.position.y[0])
     filtered_error = self.position_error_filter.update(raw_position_error)
-    correction = self.position_error_gain * filtered_error
+    correction = self.position_error_gain * filtered_error * position_speed_scale
     self.curvature_bias = float(
       np.clip(correction, -self.position_error_max, self.position_error_max)
     )
@@ -518,7 +523,10 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     actual_yaw_rate = -CS.yawRate
     heading_error_raw = desired_yaw_rate - actual_yaw_rate
     heading_error = self.heading_error_filter.update(heading_error_raw)
-    speed_scale = float(np.interp(CS.vEgo, [3.0, 15.0], [0.0, 1.0]))
+    # Previously [3.0, 15.0]: at 5 m/s (18 km/h) only ~13 % of heading correction
+    # was applied, severely limiting turn-in authority in urban 90-degree turns.
+    # New range [2.0, 10.0]: at 5 m/s → ~50 %, full correction from 10 m/s onward.
+    speed_scale = float(np.interp(CS.vEgo, [2.0, 10.0], [0.0, 1.0]))
     return self.heading_error_gain * heading_error * speed_scale
 
   # ==================================================================
@@ -564,6 +572,15 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
 
     min_abs_jerk = min(future_jerks, key=lambda x: abs(x))
     filtered_jerk = self.jerk_filter.update(min_abs_jerk)
+
+    # Asymmetric jerk anticipation: full gain during corner entry (positive jerk
+    # → steering builds) but damped during exit (negative jerk).  Applying the
+    # full negative jerk feedforward causes an aggressive withdrawal of torque
+    # exactly when the car is still mid-corner, producing the observed fast
+    # snap-back and subsequent body oscillation.
+    if filtered_jerk < 0:
+      filtered_jerk *= 0.35
+
     return self.jerk_anticipation_gain * filtered_jerk
 
   # ==================================================================
@@ -615,7 +632,9 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     self._measurement = self._actual_lateral_accel + low_speed_factor * self._actual_curvature
 
     # --- Apply curvature bias from Layer 3 ---
-    if CS.vEgo > 5.0:
+    # Lowered threshold from 5.0 m/s to 2.0 m/s to match the scaled position
+    # correction that now operates down to 2.0 m/s.
+    if CS.vEgo > 2.0:
       bias_as_lat_accel = self.curvature_bias * CS.vEgo ** 2
       self._setpoint += bias_as_lat_accel
 
@@ -671,8 +690,11 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     self._ff += jerk_ff
 
     # --- PID output ---
+    # Integrator frozen below 2.0 m/s (was 5.0 m/s) so that the PID I-term
+    # can accumulate the steady-state correction needed during low-speed urban
+    # turns (5–15 km/h) in both RTTC and NNLC.
     freeze_integrator = (
-      self._steer_limited_by_safety or CS.steeringPressed or CS.vEgo < 5
+      self._steer_limited_by_safety or CS.steeringPressed or CS.vEgo < 2.0
     )
     self._output_torque = self._pid.update(
       self._pid_log.error,

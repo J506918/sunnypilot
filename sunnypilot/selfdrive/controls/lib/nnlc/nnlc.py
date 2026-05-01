@@ -85,7 +85,8 @@ class NeuralNetworkLateralControl(LatControlTorqueExtBase):
                                              FRICTION_THRESHOLD, self.lac_torque.torque_params)
 
   def update_output_torque(self, CS):
-    freeze_integrator = self._steer_limited_by_safety or CS.steeringPressed or CS.vEgo < 5
+    # Integrator frozen below 2.0 m/s (was 5.0 m/s) — see rttc.py for rationale.
+    freeze_integrator = self._steer_limited_by_safety or CS.steeringPressed or CS.vEgo < 2.0
     self._output_torque = self._pid.update(self._pid_log.error,
                                            feedforward=self._ff,
                                            speed=CS.vEgo,
