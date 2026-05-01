@@ -28,6 +28,9 @@ KD = 0.0
 INTERP_SPEEDS = [1, 1.5, 2.0, 3.0, 5, 7.5, 10, 15, 30]
 KP_INTERP = [250, 120, 65, 30, 11.5, 5.5, 3.5, 2.0, KP]
 
+LOW_SPEED_X = [0, 10, 20, 30]  # speed breakpoints in m/s
+LOW_SPEED_Y = [12, 3, 1, 0]    # curvature amplification factors (squared before use)
+
 LP_FILTER_CUTOFF_HZ = 1.2
 LAT_ACCEL_REQUEST_BUFFER_SECONDS = 1.0
 FRICTION_THRESHOLD = 0.3
@@ -89,7 +92,9 @@ class LatControlTorque(LatControl):
       self.previous_measurement = measurement
 
       setpoint = lat_delay * desired_lateral_jerk + expected_lateral_accel
-      error = setpoint - measurement
+      low_speed_factor = float(np.interp(CS.vEgo, LOW_SPEED_X, LOW_SPEED_Y)) ** 2
+      setpoint += low_speed_factor * desired_curvature
+      error = setpoint - (measurement + low_speed_factor * measured_curvature)
 
       # do error correction in lateral acceleration space, convert at end to handle non-linear torque responses correctly
       pid_log.error = float(error)
