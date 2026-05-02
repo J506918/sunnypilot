@@ -18,6 +18,7 @@ MAX_LATERAL_ACCEL_NO_ROLL = 3.0  # m/s^2  (baseline for high-speed paths; overri
 # transitions back to the standard 3.0 m/s² above 10 m/s so higher-speed behaviour is
 # unchanged.  These constants are consumed only inside clip_curvature(); all other
 # references to MAX_LATERAL_ACCEL_NO_ROLL remain unaffected.
+# NOTE: Both arrays must have equal length; indices are paired (speed → accel value).
 _LOW_SPEED_LAT_ACCEL_SPEEDS = [0.0, 5.0, 10.0]   # m/s
 _LOW_SPEED_LAT_ACCEL_VALUES = [3.5, 3.5, 3.0]    # m/s²
 
@@ -25,6 +26,7 @@ _LOW_SPEED_LAT_ACCEL_VALUES = [3.5, 3.5, 3.0]    # m/s²
 # relaxed slightly at low urban speeds because tight intersection turns are expected by
 # passengers and the absolute curvature values involved are large (small radius).  At
 # ≥ 8 m/s the factor returns to 1.0, keeping motorway / national-road behaviour identical.
+# NOTE: Both arrays must have equal length; indices are paired (speed → boost factor).
 _LOW_SPEED_JERK_BOOST_SPEEDS = [2.0, 8.0]   # m/s
 _LOW_SPEED_JERK_BOOST_VALUES = [1.25, 1.0]  # ×MAX_LATERAL_JERK
 
