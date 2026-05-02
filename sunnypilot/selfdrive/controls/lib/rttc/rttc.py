@@ -650,12 +650,11 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     self._measurement = self._actual_lateral_accel + low_speed_factor * self._actual_curvature
 
     # --- Apply curvature bias from Layer 3 ---
-    # Scale bias application by the same speed ramp used in position correction
-    # (fades in from 0 at 2 m/s to full at 6 m/s) so bias and setpoint are always
-    # computed consistently.
-    position_speed_scale = float(np.interp(CS.vEgo, [2.0, 6.0], [0.0, 1.0]))
-    if position_speed_scale > 0.0:
-      bias_as_lat_accel = self.curvature_bias * CS.vEgo ** 2 * position_speed_scale
+    # self.curvature_bias already incorporates the [2.0, 6.0] m/s speed ramp from
+    # _compute_position_correction(), so apply it directly here without re-scaling.
+    # Below 2 m/s the bias is already zero, so no additional guard is needed.
+    if CS.vEgo > 2.0:
+      bias_as_lat_accel = self.curvature_bias * CS.vEgo ** 2
       self._setpoint += bias_as_lat_accel
 
     # --- Layer 1: lateral accel error in torque space ---
