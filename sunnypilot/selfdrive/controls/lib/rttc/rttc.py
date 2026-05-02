@@ -203,14 +203,27 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     self.curvature_bias = 0.0
     self.eps_saturated_count = 0
 
-    # Past data buffers
-    self.past_times = [-0.3, -0.2, -0.1]
-    history_check_frames = [int(abs(i) * 100) for i in self.past_times]
-    self.history_frame_offsets = [
-      history_check_frames[0] - i for i in history_check_frames
-    ]
-    self.lateral_accel_desired_deque = deque(maxlen=history_check_frames[0])
-    self.roll_deque = deque(maxlen=history_check_frames[0])
+    # Control loop rate (100 Hz in the standard openpilot control loop).
+    # Used to convert time delays to frame indices for the lag buffer.
+    self._dt = 0.01
+
+    # Lag buffer: stores recent desired-lateral-accel values so that the main
+    # RTTC error signal can be built against a delay-compensated setpoint.
+    # The vehicle's measured lateral accel at time t reflects commands sent
+    # ≈ desired_lat_jerk_time seconds earlier (the learned actuator lag).
+    # Comparing setpoint(t − lag) with measurement(t) gives a phase-aligned
+    # tracking error — the same principle used by latcontrol_torque.py via its
+    # lat_accel_request_buffer / delay_frames mechanism.
+    # Sized to 1 second to cover any realistic steerActuatorDelay range.
+    # Initialised with zeros (same pattern as latcontrol_torque.py); for the
+    # first ~lag seconds after RTTC activates the lag-compensated setpoint draws
+    # from these zeros, but the heading-correction feedforward layer (Layer 2)
+    # covers this brief startup transient without any additional guard needed.
+    _LAG_BUFFER_SECONDS = 1.0
+    self._lag_buffer_len = int(_LAG_BUFFER_SECONDS / self._dt)
+    self._desired_lat_accel_buffer = deque([0.0] * self._lag_buffer_len, maxlen=self._lag_buffer_len)
+
+    self.roll_deque = deque(maxlen=50)
 
     # Apply any loaded learned state to RTTC gains immediately
     if self._d_converged:
@@ -650,14 +663,35 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
       roll = roll_pitch_adjust(roll, pitch)
       self.pitch_last = pitch
     self.roll_deque.append(roll)
-    self.lateral_accel_desired_deque.append(self._desired_lateral_accel)
+
+    # Append current desired lateral accel to the lag buffer each frame.
+    # `_desired_lateral_accel` equals desired_curvature * vEgo^2 — the same
+    # quantity stored by latcontrol_torque.py in its lat_accel_request_buffer.
+    self._desired_lat_accel_buffer.append(self._desired_lateral_accel)
 
     # --- Layer 3: position correction ---
     self._compute_position_correction(CS)
 
-    # --- Low speed curvature injection ---
+    # --- Unified lag-compensated setpoint construction ---
+    # The vehicle's measured lateral accel at time t reflects steering commands
+    # from ≈ desired_lat_jerk_time seconds earlier (the learned actuator lag,
+    # updated each control cycle via update_lateral_lag).  Constructing the
+    # main setpoint from the desired value `lag` seconds ago aligns the error
+    # signal's time reference with the measurement, removing the persistent
+    # phase lead that previously caused inconsistent tracking across speeds and
+    # corner types (low-speed urban turns, sustained curves, highway ramps).
+    #
+    # This is architecturally equivalent to the delay_frames / expected_lateral_accel
+    # mechanism in latcontrol_torque.py, applied here using RTTC's own lag buffer
+    # and the shared desired_lat_jerk_time (learned lateral delay).
+    lag_frames = int(np.clip(self.desired_lat_jerk_time / self._dt + 1, 1, self._lag_buffer_len))
+    lag_compensated_desired = float(self._desired_lat_accel_buffer[-lag_frames])
+
+    # Low-speed curvature injection uses the *current* desired curvature (not
+    # lag-compensated) to bridge the model's limited lateral-accel signal in
+    # tight low-speed turns — it tracks the current planned path, not the past.
     low_speed_factor = float(np.interp(CS.vEgo, LOW_SPEED_X, LOW_SPEED_Y)) ** 2
-    self._setpoint = self._desired_lateral_accel + low_speed_factor * self._desired_curvature
+    self._setpoint = lag_compensated_desired + low_speed_factor * self._desired_curvature
     self._measurement = self._actual_lateral_accel + low_speed_factor * self._actual_curvature
 
     # --- Apply curvature bias from Layer 3 ---
