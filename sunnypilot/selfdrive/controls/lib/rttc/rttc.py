@@ -21,6 +21,15 @@ from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_ext_base impo
 LOW_SPEED_X = [0, 10, 20, 30]
 LOW_SPEED_Y = [12, 3, 1, 0]
 
+# Bounded lag-compensation blend weight for the main RTTC setpoint.
+# The setpoint is constructed as:
+#   (1 - w) * current_desired + w * lag_compensated_desired
+# where w = LAG_BLEND_MAX.  Capping at 0.40 keeps the controller
+# feedback-led (60 % of setpoint still follows current planned path)
+# while providing partial phase alignment with the measurement.
+# This is a conservative, interpretable choice — not a magic number.
+LAG_BLEND_MAX = 0.40
+
 # Stage D learning constants
 D_LEARNING_RATE = 0.02           # EMA learning rate for friction / steer_ratio
 D_WINDOW_SIZE = 50               # rolling window for variance / convergence check
@@ -203,14 +212,26 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     self.curvature_bias = 0.0
     self.eps_saturated_count = 0
 
-    # Past data buffers
-    self.past_times = [-0.3, -0.2, -0.1]
-    history_check_frames = [int(abs(i) * 100) for i in self.past_times]
-    self.history_frame_offsets = [
-      history_check_frames[0] - i for i in history_check_frames
-    ]
-    self.lateral_accel_desired_deque = deque(maxlen=history_check_frames[0])
-    self.roll_deque = deque(maxlen=history_check_frames[0])
+    # Control loop rate (100 Hz in the standard openpilot control loop).
+    # Used to convert lag time to buffer frame indices.
+    self._dt = 0.01
+
+    # Lag buffer: stores recent desired-lateral-accel values so the main
+    # setpoint can include a bounded lag-compensated component.
+    # The vehicle's measured lateral accel at time t reflects steering
+    # commands from ≈ desired_lat_jerk_time seconds earlier (the learned
+    # actuator lag updated each cycle via update_lateral_lag).  Blending
+    # a fraction of the lagged desired value into the setpoint partially
+    # aligns its time reference with the measurement without making the
+    # controller fully backward-looking.
+    # Sized to 1 second (100 frames @ 100 Hz) to cover any realistic
+    # steerActuatorDelay.  Zero-initialised; the heading-correction layer
+    # (Layer 2) covers the brief startup transient while the buffer fills.
+    _LAG_BUFFER_SECONDS = 1.0
+    self._lag_buffer_len = int(_LAG_BUFFER_SECONDS / self._dt)
+    self._desired_lat_accel_buffer = deque([0.0] * self._lag_buffer_len, maxlen=self._lag_buffer_len)
+
+    self.roll_deque = deque(maxlen=50)
 
     # Apply any loaded learned state to RTTC gains immediately
     if self._d_converged:
@@ -650,14 +671,51 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
       roll = roll_pitch_adjust(roll, pitch)
       self.pitch_last = pitch
     self.roll_deque.append(roll)
-    self.lateral_accel_desired_deque.append(self._desired_lateral_accel)
+    self._desired_lat_accel_buffer.append(self._desired_lateral_accel)
 
     # --- Layer 3: position correction ---
     self._compute_position_correction(CS)
 
-    # --- Low speed curvature injection ---
+    # --- Bounded lag-compensated setpoint construction ---
+    #
+    # The vehicle's measured lateral accel at time t reflects steering
+    # commands issued ≈ desired_lat_jerk_time seconds earlier (the learned
+    # actuator lag, updated via update_lateral_lag each cycle).  Ideally the
+    # setpoint and measurement share the same time reference so the tracking
+    # error is pure phase-aligned tracking error rather than a mix of genuine
+    # tracking lag and artificial phase lead.
+    #
+    # Rather than hard-switching the setpoint to 100% lag-compensated desired
+    # (which would make the controller fully backward-looking and create new
+    # phase problems during fast curvature transitions), we blend conservatively:
+    #
+    #   blended_desired = (1 - LAG_BLEND_MAX) * current_desired
+    #                   +      LAG_BLEND_MAX  * lag_compensated_desired
+    #
+    # With LAG_BLEND_MAX = 0.40 the setpoint remains 60 % current-desired
+    # (feedback-led) while 40 % of the lag contribution reduces the persistent
+    # phase lead that causes inconsistent tracking on sustained turns and ramps.
+    # This is a deliberate, bounded trade-off — not a magic constant.
+    #
+    # Low-speed curvature injection (low_speed_factor * desired_curvature) is
+    # kept as a separate, explicitly current-frame path-guidance term.  Its
+    # role is to supplement the lateral-accel signal in tight, low-speed turns
+    # where model lateral-accel authority is limited.  Using current desired
+    # curvature here is structurally justified: the injection tracks the current
+    # planned path rather than aligning with past steering commands.  The two-
+    # part setpoint is therefore not a hidden timing collision — the boundary
+    # between the partially lag-aware lateral-accel component and the current-
+    # frame curvature supplement is explicit and bounded in magnitude.
+    # `+ 1` mirrors the identical offset in latcontrol_torque.py's delay_frames
+    # calculation: the current frame was just appended, so index [-1] is now-desired.
+    # Adding 1 ensures lag_frames = 1 at zero delay (using the freshly appended
+    # current value) and consistently adds one extra pipeline frame across all delays.
+    lag_frames = int(np.clip(self.desired_lat_jerk_time / self._dt + 1, 1, self._lag_buffer_len))
+    lag_compensated_desired = float(self._desired_lat_accel_buffer[-lag_frames])
+    blended_desired = (1.0 - LAG_BLEND_MAX) * self._desired_lateral_accel + LAG_BLEND_MAX * lag_compensated_desired
+
     low_speed_factor = float(np.interp(CS.vEgo, LOW_SPEED_X, LOW_SPEED_Y)) ** 2
-    self._setpoint = self._desired_lateral_accel + low_speed_factor * self._desired_curvature
+    self._setpoint = blended_desired + low_speed_factor * self._desired_curvature
     self._measurement = self._actual_lateral_accel + low_speed_factor * self._actual_curvature
 
     # --- Apply curvature bias from Layer 3 ---
