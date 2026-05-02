@@ -104,7 +104,11 @@ class LatControlTorque(LatControl):
       # TODO jerk is weighted by lat_delay for legacy reasons, but should be made independent of it
       ff += get_friction(error, lateral_accel_deadzone, FRICTION_THRESHOLD, self.torque_params)
 
-      freeze_integrator = steer_limited_by_safety or CS.steeringPressed or CS.vEgo < 5
+      # Freeze the integrator at very low speed (< 2.0 m/s / ~7 km/h) to prevent
+      # integrator wind-up from near-stationary noise.  The threshold is 2.0 m/s —
+      # not the legacy 5.0 m/s — so the integrator can contribute during low-speed
+      # urban turns (consistent with latcontrol_torque v1, RTTC, and NNLC behaviour).
+      freeze_integrator = steer_limited_by_safety or CS.steeringPressed or CS.vEgo < 2.0
       output_lataccel = self.pid.update(pid_log.error,
                                        -measurement_rate,
                                         feedforward=ff,

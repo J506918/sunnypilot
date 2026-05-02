@@ -85,7 +85,11 @@ class NeuralNetworkLateralControl(LatControlTorqueExtBase):
                                              FRICTION_THRESHOLD, self.lac_torque.torque_params)
 
   def update_output_torque(self, CS):
-    freeze_integrator = self._steer_limited_by_safety or CS.steeringPressed or CS.vEgo < 5
+    # Freeze the integrator at very low speed (< 2.0 m/s / ~7 km/h) to prevent
+    # integrator wind-up from near-stationary noise.  The threshold is 2.0 m/s —
+    # not the legacy 5.0 m/s — so the integrator can contribute during low-speed
+    # urban turns (consistent with latcontrol_torque v0/v1 and RTTC behaviour).
+    freeze_integrator = self._steer_limited_by_safety or CS.steeringPressed or CS.vEgo < 2.0
     self._output_torque = self._pid.update(self._pid_log.error,
                                            feedforward=self._ff,
                                            speed=CS.vEgo,

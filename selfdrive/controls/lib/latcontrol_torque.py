@@ -101,7 +101,11 @@ class LatControlTorque(LatControl):
       # do error correction in lateral acceleration space, convert at end to handle non-linear torque responses correctly
       pid_log.error = float(error)
 
-      freeze_integrator = steer_limited_by_safety or CS.steeringPressed or CS.vEgo < 5
+      # Freeze the integrator at very low speed (< 2.0 m/s / ~7 km/h) to prevent
+      # integrator wind-up from near-stationary noise.  The threshold is 2.0 m/s —
+      # not the legacy 5.0 m/s — so the integrator can contribute during low-speed
+      # urban turns (consistent with RTTC / NNLC extension behaviour).
+      freeze_integrator = steer_limited_by_safety or CS.steeringPressed or CS.vEgo < 2.0
       output_lataccel = self.pid.update(pid_log.error, speed=CS.vEgo, feedforward=ff, freeze_integrator=freeze_integrator)
       output_torque = self.torque_from_lateral_accel(output_lataccel, self.torque_params)
 

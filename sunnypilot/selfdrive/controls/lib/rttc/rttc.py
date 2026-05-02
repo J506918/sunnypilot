@@ -495,13 +495,17 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
       self.curvature_bias = 0.0
       return
 
-    if CS.vEgo < 5.0:
+    # Soft speed ramp instead of a hard 5.0 m/s gate: position correction fades in
+    # between 2 and 6 m/s so it contributes during low-speed 90-degree turns while
+    # having zero influence below 2 m/s (near-stationary noise avoidance).
+    position_speed_scale = float(np.interp(CS.vEgo, [2.0, 6.0], [0.0, 1.0]))
+    if position_speed_scale <= 0.0:
       self.curvature_bias = 0.0
       return
 
     raw_position_error = float(self.model_v2.position.y[0])
     filtered_error = self.position_error_filter.update(raw_position_error)
-    correction = self.position_error_gain * filtered_error
+    correction = self.position_error_gain * filtered_error * position_speed_scale
     self.curvature_bias = float(
       np.clip(correction, -self.position_error_max, self.position_error_max)
     )
@@ -518,7 +522,11 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     actual_yaw_rate = -CS.yawRate
     heading_error_raw = desired_yaw_rate - actual_yaw_rate
     heading_error = self.heading_error_filter.update(heading_error_raw)
-    speed_scale = float(np.interp(CS.vEgo, [3.0, 15.0], [0.0, 1.0]))
+    # Scale from 0 at 2 m/s to 1 at 10 m/s — lower than the previous [3.0, 15.0]
+    # range so that heading correction is present during low-speed 90-degree turns.
+    # At very low speed (< 2 m/s) heading correction is zero to avoid near-stationary
+    # noise from a noisy yaw rate signal.
+    speed_scale = float(np.interp(CS.vEgo, [2.0, 10.0], [0.0, 1.0]))
     return self.heading_error_gain * heading_error * speed_scale
 
   # ==================================================================
@@ -539,6 +547,13 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
   # ==================================================================
   # Jerk anticipation
   # ==================================================================
+
+  # Fraction by which negative (exit-phase) jerk feedforward is reduced.
+  # A value of 1.0 would mean no damping (original behaviour); 0.0 would eliminate
+  # all negative jerk contribution.  0.35 preserves the direction signal while
+  # substantially softening the snap-back that caused body oscillation on unwind.
+  EXIT_JERK_DAMPING_FACTOR = 0.35
+
   def _compute_jerk_anticipation(self, CS):
     if (
       self.model_v2 is None
@@ -564,6 +579,13 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
 
     min_abs_jerk = min(future_jerks, key=lambda x: abs(x))
     filtered_jerk = self.jerk_filter.update(min_abs_jerk)
+
+    # Damp negative jerk feedforward (exit / unwind phase) to prevent too-fast
+    # snap-back that causes body oscillation after a 90-degree turn.  Positive
+    # (entry) jerk is unaffected so turn-in anticipation is preserved.
+    if filtered_jerk < 0:
+      filtered_jerk *= self.EXIT_JERK_DAMPING_FACTOR
+
     return self.jerk_anticipation_gain * filtered_jerk
 
   # ==================================================================
@@ -576,9 +598,22 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
   # ==================================================================
   # Straight-line damping
   # ==================================================================
-  def _get_straight_damping(self):
+  def _get_straight_damping(self, vEgo=None):
     abs_curv = abs(self._desired_curvature)
-    return float(np.interp(abs_curv, self.straight_damp_bp, self.straight_damp_v))
+    base_damp = float(np.interp(abs_curv, self.straight_damp_bp, self.straight_damp_v))
+
+    if vEgo is None or vEgo >= 8.0:
+      return base_damp
+
+    # At low speed the breakpoint region (curvature 0 → 0.001) is traversed in
+    # < 1 control frame, so straight_damp is not the dominant bottleneck for
+    # 90-degree turn entry.  However, at very small curvature (near-straight) the
+    # base_damp factor (~0.65–0.85) does reduce the error signal.  Below 8 m/s
+    # we blend toward 1.0 (no damping) proportional to speed so that:
+    #   – near-stationary / very-low-speed: effectively no straight_damp suppression
+    #   – above 8 m/s: full straight_damp restored for on-centre stability
+    speed_scale = float(np.interp(vEgo, [2.0, 8.0], [0.0, 1.0]))
+    return 1.0 + (base_damp - 1.0) * speed_scale
 
   # ==================================================================
   # Main entry: called from latcontrol_torque_ext.py
@@ -615,7 +650,10 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     self._measurement = self._actual_lateral_accel + low_speed_factor * self._actual_curvature
 
     # --- Apply curvature bias from Layer 3 ---
-    if CS.vEgo > 5.0:
+    # self.curvature_bias already incorporates the [2.0, 6.0] m/s speed ramp from
+    # _compute_position_correction(), so apply it directly here without re-scaling.
+    # Below 2 m/s the bias is already zero, so no additional guard is needed.
+    if CS.vEgo > 2.0:
       bias_as_lat_accel = self.curvature_bias * CS.vEgo ** 2
       self._setpoint += bias_as_lat_accel
 
@@ -632,7 +670,7 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
 
     # --- Curvature boost & straight damping ---
     curvature_boost = self._get_curvature_boost()
-    straight_damp = self._get_straight_damping()
+    straight_damp = self._get_straight_damping(CS.vEgo)
     self._pid_log.error = base_error * curvature_boost * straight_damp
 
     # --- Stage D: adaptive parameter learning (throttled to 10Hz; EMA learning is slow) ---
@@ -671,8 +709,12 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     self._ff += jerk_ff
 
     # --- PID output ---
+    # Freeze the integrator at very low speed (< 2.0 m/s / ~7 km/h) to prevent
+    # integrator wind-up from near-stationary noise.  The threshold is 2.0 m/s —
+    # not the legacy 5.0 m/s — so the integrator can build up during low-speed
+    # urban turns (consistent with base latcontrol_torque and NNLC behaviour).
     freeze_integrator = (
-      self._steer_limited_by_safety or CS.steeringPressed or CS.vEgo < 5
+      self._steer_limited_by_safety or CS.steeringPressed or CS.vEgo < 2.0
     )
     self._output_torque = self._pid.update(
       self._pid_log.error,
