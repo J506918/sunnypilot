@@ -11,7 +11,22 @@ MAX_VEL_ERR = 5.0  # m/s
 
 # EU guidelines
 MAX_LATERAL_JERK = 5.0  # m/s^3
-MAX_LATERAL_ACCEL_NO_ROLL = 3.0  # m/s^2
+MAX_LATERAL_ACCEL_NO_ROLL = 3.0  # m/s^2  (baseline for high-speed paths; overridden below at low speed)
+
+# Low-speed lateral acceleration limit: at urban speeds (≤ 5 m/s / ~18 km/h) allow a
+# slightly higher cap to improve turn-in at tight 90-degree intersections.  The value
+# transitions back to the standard 3.0 m/s² above 10 m/s so higher-speed behaviour is
+# unchanged.  These constants are consumed only inside clip_curvature(); all other
+# references to MAX_LATERAL_ACCEL_NO_ROLL remain unaffected.
+_LOW_SPEED_LAT_ACCEL_SPEEDS = [0.0, 5.0, 10.0]   # m/s
+_LOW_SPEED_LAT_ACCEL_VALUES = [3.5, 3.5, 3.0]    # m/s²
+
+# Low-speed curvature-rate boost: the standard ISO lateral-jerk limit (5 m/s³) can be
+# relaxed slightly at low urban speeds because tight intersection turns are expected by
+# passengers and the absolute curvature values involved are large (small radius).  At
+# ≥ 8 m/s the factor returns to 1.0, keeping motorway / national-road behaviour identical.
+_LOW_SPEED_JERK_BOOST_SPEEDS = [2.0, 8.0]   # m/s
+_LOW_SPEED_JERK_BOOST_VALUES = [1.25, 1.0]  # ×MAX_LATERAL_JERK
 
 
 def clamp(val, min_val, max_val):
@@ -25,14 +40,22 @@ def smooth_value(val, prev_val, tau, dt=DT_MDL):
 def clip_curvature(v_ego, prev_curvature, new_curvature, roll) -> tuple[float, bool]:
   # This function respects ISO lateral jerk and acceleration limits + a max curvature
   v_ego = max(v_ego, MIN_SPEED)
-  max_curvature_rate = MAX_LATERAL_JERK / (v_ego ** 2)  # inexact calculation, check https://github.com/commaai/openpilot/pull/24755
+
+  # Low-speed curvature-rate boost: at urban intersection speeds the effective jerk cap
+  # is raised slightly (see _LOW_SPEED_JERK_BOOST_* constants) so that tight 90-degree
+  # turns can be entered without excessive lag.  Above 8 m/s the boost is 1.0 (no change).
+  effective_max_jerk = MAX_LATERAL_JERK * float(np.interp(v_ego, _LOW_SPEED_JERK_BOOST_SPEEDS, _LOW_SPEED_JERK_BOOST_VALUES))
+  max_curvature_rate = effective_max_jerk / (v_ego ** 2)  # inexact calculation, check https://github.com/commaai/openpilot/pull/24755
   new_curvature = np.clip(new_curvature,
                           prev_curvature - max_curvature_rate * DT_CTRL,
                           prev_curvature + max_curvature_rate * DT_CTRL)
 
   roll_compensation = roll * ACCELERATION_DUE_TO_GRAVITY
-  max_lat_accel = MAX_LATERAL_ACCEL_NO_ROLL + roll_compensation
-  min_lat_accel = -MAX_LATERAL_ACCEL_NO_ROLL + roll_compensation
+  # Low-speed lateral accel cap (see _LOW_SPEED_LAT_ACCEL_* constants above).
+  # Above 10 m/s this evaluates to MAX_LATERAL_ACCEL_NO_ROLL (3.0 m/s²).
+  max_lat_accel_no_roll = float(np.interp(v_ego, _LOW_SPEED_LAT_ACCEL_SPEEDS, _LOW_SPEED_LAT_ACCEL_VALUES))
+  max_lat_accel = max_lat_accel_no_roll + roll_compensation
+  min_lat_accel = -max_lat_accel_no_roll + roll_compensation
   new_curvature, limited_accel = clamp(new_curvature, min_lat_accel / v_ego ** 2, max_lat_accel / v_ego ** 2)
 
   new_curvature, limited_max_curv = clamp(new_curvature, -MAX_CURVATURE, MAX_CURVATURE)
