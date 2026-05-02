@@ -196,6 +196,7 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
 
     # position filter: heavier car → more smoothing
     position_filter_tau = 0.6 + 0.3 * (self.car_mass / 1800.0)
+    self._position_filter_tau_base = position_filter_tau  # stored for speed-adaptive adjustment
     self.position_error_filter = FirstOrderFilter(0.0, position_filter_tau, 0.01)
 
     self.jerk_filter = FirstOrderFilter(0.0, 0.1, 0.01)
@@ -496,12 +497,21 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
       return
 
     # Soft speed ramp instead of a hard 5.0 m/s gate: position correction fades in
-    # between 2 and 6 m/s so it contributes during low-speed 90-degree turns while
-    # having zero influence below 2 m/s (near-stationary noise avoidance).
-    position_speed_scale = float(np.interp(CS.vEgo, [2.0, 6.0], [0.0, 1.0]))
+    # between 1.5 and 6 m/s so it contributes during low-speed 90-degree turns while
+    # having zero influence below 1.5 m/s (near-stationary noise avoidance).
+    # The lower bound was reduced from 2.0 m/s to 1.5 m/s to let Layer 3 path-position
+    # correction start contributing earlier during very low-speed tight turns (~5 km/h).
+    position_speed_scale = float(np.interp(CS.vEgo, [1.5, 6.0], [0.0, 1.0]))
     if position_speed_scale <= 0.0:
       self.curvature_bias = 0.0
       return
+
+    # Speed-adaptive position filter tau: at very low speed use a smaller tau to allow
+    # faster position-error tracking in tight urban turns.  Above 3 m/s the full base tau
+    # is restored so higher-speed filtering behaviour is unchanged.
+    low_tau = min(0.4, self._position_filter_tau_base / 2.0)
+    adaptive_tau = float(np.interp(CS.vEgo, [1.5, 3.0], [low_tau, self._position_filter_tau_base]))
+    self.position_error_filter.update_alpha(adaptive_tau)
 
     raw_position_error = float(self.model_v2.position.y[0])
     filtered_error = self.position_error_filter.update(raw_position_error)
@@ -522,11 +532,12 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     actual_yaw_rate = -CS.yawRate
     heading_error_raw = desired_yaw_rate - actual_yaw_rate
     heading_error = self.heading_error_filter.update(heading_error_raw)
-    # Scale from 0 at 2 m/s to 1 at 10 m/s — lower than the previous [3.0, 15.0]
-    # range so that heading correction is present during low-speed 90-degree turns.
-    # At very low speed (< 2 m/s) heading correction is zero to avoid near-stationary
-    # noise from a noisy yaw rate signal.
-    speed_scale = float(np.interp(CS.vEgo, [2.0, 10.0], [0.0, 1.0]))
+    # Scale from 0 at 1.5 m/s to 1 at 10 m/s — lower than the previous [2.0, 10.0]
+    # range so that heading correction contributes earlier during very low-speed
+    # 90-degree turns (roughly 5 km/h / ~1.4 m/s entry speed).  The lower bound was
+    # reduced from 2.0 m/s to 1.5 m/s; at very low speed (< 1.5 m/s) heading correction
+    # remains zero to avoid near-stationary noise from a noisy yaw rate signal.
+    speed_scale = float(np.interp(CS.vEgo, [1.5, 10.0], [0.0, 1.0]))
     return self.heading_error_gain * heading_error * speed_scale
 
   # ==================================================================
@@ -650,10 +661,10 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     self._measurement = self._actual_lateral_accel + low_speed_factor * self._actual_curvature
 
     # --- Apply curvature bias from Layer 3 ---
-    # self.curvature_bias already incorporates the [2.0, 6.0] m/s speed ramp from
+    # self.curvature_bias already incorporates the [1.5, 6.0] m/s speed ramp from
     # _compute_position_correction(), so apply it directly here without re-scaling.
-    # Below 2 m/s the bias is already zero, so no additional guard is needed.
-    if CS.vEgo > 2.0:
+    # Below 1.5 m/s the bias is already zero, so no additional guard is needed.
+    if CS.vEgo > 1.5:
       bias_as_lat_accel = self.curvature_bias * CS.vEgo ** 2
       self._setpoint += bias_as_lat_accel
 
