@@ -552,7 +552,7 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
   # A value of 1.0 would mean no damping (original behaviour); 0.0 would eliminate
   # all negative jerk contribution.  0.35 preserves the direction signal while
   # substantially softening the snap-back that caused body oscillation on unwind.
-  _EXIT_JERK_DAMPING_FACTOR = 0.35
+  EXIT_JERK_DAMPING_FACTOR = 0.35
 
   def _compute_jerk_anticipation(self, CS):
     if (
@@ -584,7 +584,7 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     # snap-back that causes body oscillation after a 90-degree turn.  Positive
     # (entry) jerk is unaffected so turn-in anticipation is preserved.
     if filtered_jerk < 0:
-      filtered_jerk *= self._EXIT_JERK_DAMPING_FACTOR
+      filtered_jerk *= self.EXIT_JERK_DAMPING_FACTOR
 
     return self.jerk_anticipation_gain * filtered_jerk
 
@@ -608,7 +608,7 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     # At low speed the breakpoint region (curvature 0 → 0.001) is traversed in
     # < 1 control frame, so straight_damp is not the dominant bottleneck for
     # 90-degree turn entry.  However, at very small curvature (near-straight) the
-    # damp_base factor (~0.65–0.85) does reduce the error signal.  Below 8 m/s
+    # base_damp factor (~0.65–0.85) does reduce the error signal.  Below 8 m/s
     # we blend toward 1.0 (no damping) proportional to speed so that:
     #   – near-stationary / very-low-speed: effectively no straight_damp suppression
     #   – above 8 m/s: full straight_damp restored for on-centre stability
