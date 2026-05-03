@@ -194,8 +194,10 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
       0.0, 1.0 / (2.0 * math.pi * heading_filter_hz), 0.01
     )
 
-    # position filter: heavier car → more smoothing
-    position_filter_tau = 0.6 + 0.3 * (self.car_mass / 1800.0)
+    # position filter: faster tau so position feedback contributes within the 2-3 s
+    # duration of a low-speed 90-degree turn. The model position signal is smooth
+    # enough that the old 0.9 s tau (at 1800 kg) was unnecessarily conservative.
+    position_filter_tau = 0.3 + 0.15 * (self.car_mass / 1800.0)
     self.position_error_filter = FirstOrderFilter(0.0, position_filter_tau, 0.01)
 
     self.jerk_filter = FirstOrderFilter(0.0, 0.1, 0.01)
@@ -496,9 +498,9 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
       return
 
     # Soft speed ramp instead of a hard 5.0 m/s gate: position correction fades in
-    # between 2 and 6 m/s so it contributes during low-speed 90-degree turns while
-    # having zero influence below 2 m/s (near-stationary noise avoidance).
-    position_speed_scale = float(np.interp(CS.vEgo, [2.0, 6.0], [0.0, 1.0]))
+    # between 1 and 5 m/s so it contributes earlier during low-speed 90-degree turns
+    # while having zero influence below 1 m/s (near-stationary noise avoidance).
+    position_speed_scale = float(np.interp(CS.vEgo, [1.0, 5.0], [0.0, 1.0]))
     if position_speed_scale <= 0.0:
       self.curvature_bias = 0.0
       return
@@ -522,12 +524,14 @@ class RealTimeTorqueCorrection(LatControlTorqueExtBase):
     actual_yaw_rate = -CS.yawRate
     heading_error_raw = desired_yaw_rate - actual_yaw_rate
     heading_error = self.heading_error_filter.update(heading_error_raw)
-    # Scale from 0 at 2 m/s to 1 at 10 m/s — lower than the previous [3.0, 15.0]
-    # range so that heading correction is present during low-speed 90-degree turns.
-    # At very low speed (< 2 m/s) heading correction is zero to avoid near-stationary
-    # noise from a noisy yaw rate signal.
-    speed_scale = float(np.interp(CS.vEgo, [2.0, 10.0], [0.0, 1.0]))
-    return self.heading_error_gain * heading_error * speed_scale
+    # Heading correction ramps from 0 at 1 m/s to full strength at 7 m/s (was 2–10 m/s).
+    # Lowering the range gives substantially more feedforward authority at low-speed
+    # urban turns (3–6 m/s) where turn-in sluggishness is most noticeable.
+    speed_scale = float(np.interp(CS.vEgo, [1.0, 7.0], [0.0, 1.0]))
+    # Additional low-speed gain boost: 50% extra at very low speed, tapering smoothly
+    # to 1.0 above 8 m/s so medium/high-speed heading correction is unchanged.
+    low_speed_boost = float(np.interp(CS.vEgo, [1.0, 8.0], [1.5, 1.0]))
+    return self.heading_error_gain * heading_error * speed_scale * low_speed_boost
 
   # ==================================================================
   # EPS saturation protection
