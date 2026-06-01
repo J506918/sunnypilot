@@ -116,6 +116,7 @@ class TogglesLayout(Widget):
         self._params.get_bool(param),
         callback=lambda state, p=param: self._toggle_callback(state, p),
         icon=icon,
+        param=param,
       )
 
       try:
