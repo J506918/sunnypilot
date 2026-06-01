@@ -11,7 +11,11 @@ from openpilot.common.params import Params
 from openpilot.system.hardware import HARDWARE
 from openpilot.system.hardware.hw import Paths
 
-API_HOST = os.getenv('SUNNYLINK_API_HOST', 'https://stg.api.sunnypilot.ai')
+import requests
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+API_HOST = os.getenv('SUNNYLINK_API_HOST', 'https://8.136.28.140:8443/api/v1')
 UNREGISTERED_SUNNYLINK_DONGLE_ID = "UnregisteredDevice"
 MAX_RETRIES = 6
 CRASH_LOG_DIR = Paths.crash_log_root()
@@ -42,7 +46,7 @@ class SunnylinkApi(BaseApi):
       time.sleep(0.5)
 
   def _resolve_dongle_ids(self):
-    sunnylink_dongle_id = self.params.get("SunnylinkDongleId")
+    sunnylink_dongle_id = self.params.get("DongleId")
     comma_dongle_id = self.dongle_id or self.params.get("DongleId")
     return sunnylink_dongle_id, comma_dongle_id
 
@@ -62,90 +66,100 @@ class SunnylinkApi(BaseApi):
     return (self.params.get("HardwareSerial")
             or HARDWARE.get_serial())
 
+  # ── Direct DashBox HTTP helpers ─────────────────────────────────
+
+  def _dash_post(self, path, data, token=None):
+    h = {"Content-Type": "application/json"}
+    if token:
+      h["Authorization"] = f"Bearer {token}"
+    return requests.post(f"{API_HOST}/{path}", json=data, headers=h,
+                         timeout=15, verify=False)
+
+  def _dash_get(self, path, token=None):
+    h = {}
+    if token:
+      h["Authorization"] = f"Bearer {token}"
+    return requests.get(f"{API_HOST}/{path}", headers=h,
+                        timeout=10, verify=False)
+
+  # ── Registration ───────────────────────────────────────────────
+
   def register_device(self, spinner=None, timeout=60, verbose=False):
+    """Register device with DashBox server."""
     self.spinner = spinner
 
     sunnylink_dongle_id, comma_dongle_id = self._resolve_dongle_ids()
 
-    if comma_dongle_id is None:
-      self._status_update("Comma dongle ID not found, deferring sunnylink's registration to comma's registration process.")
-      return None
-
-    imei1, imei2 = self._resolve_imeis()
-    serial = self._resolve_serial()
-
     if sunnylink_dongle_id not in (None, UNREGISTERED_SUNNYLINK_DONGLE_ID):
+      # Already registered — but maybe missing pairing code
+      if not self.params.get("SunnylinkPairingCode"):
+        self._fetch_pairing_code(sunnylink_dongle_id)
       return sunnylink_dongle_id
 
-    jwt_algo, private_key, public_key = BaseApi.get_key_pair()
+    serial = self._resolve_serial()
+    imei1, imei2 = self._resolve_imeis()
+    imei = imei1 or imei2 or "unknown"
 
-    start_time = time.monotonic()
-    successful_registration = False
+    _, __, public_key = BaseApi.get_key_pair()
+
     if not public_key:
-      sunnylink_dongle_id = UNREGISTERED_SUNNYLINK_DONGLE_ID
-      self._status_update("Public key not found, setting dongle ID to unregistered.")
-    else:
-      Params().put("LastSunnylinkPingTime", 0)  # Reset the last ping time to 0 if we are trying to register
+      self._status_update("Public key not found, registering without it.")
+      public_key = b""
+    start_time = time.monotonic()
+    backoff = 1
+    while True:
+      try:
+        self._status_update("Registering device to DashBox...")
+        resp = self._dash_post("devices/register", {
+          "serial": serial,
+          "imei": imei,
+          "public_key": public_key.decode() if isinstance(public_key, bytes) else public_key,
+        })
 
-      backoff = 1
-      while True:
-        register_token = jwt.encode({'register': True, 'exp': datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=1)},
-                                    cast(str, private_key), algorithm=jwt_algo)
-        try:
-          if verbose or time.monotonic() - start_time < timeout / 2:
-            self._status_update("Registering device to sunnylink...")
-          elif time.monotonic() - start_time >= timeout / 2:
-            self._status_update("Still registering device to sunnylink...")
+        if resp.status_code == 201:
+          data = resp.json()
+          sunnylink_dongle_id = data["device_id"]
+          token = data["token"]
+          self.params.put("SunnylinkToken", token)
+          self._status_update(f"DashBox registered: {sunnylink_dongle_id}")
 
-          resp = self.api_get("v2/pilotauth/", method='POST', timeout=15, imei=imei1, imei2=imei2, serial=serial,
-                              comma_dongle_id=comma_dongle_id, public_key=public_key, register_token=register_token)
-
-          if resp is None:
-            raise Exception("Unable to register device, request was None")
-
-          if resp.status_code in (409, 412):
-            timeout = time.monotonic() - start_time  # Don't retry if the public key is already in use
-            key_in_use = "Public key is already in use, is your key unique? Contact your vendor for a new key."
-            unsafe_key = "Public key is known to not be unique and it's unsafe. Contact your vendor for a new key."
-            error_message = key_in_use if resp.status_code == 409 else unsafe_key
-            raise Exception(error_message)
-
-          if resp.status_code != 200:
-            raise Exception(f"Failed to register with sunnylink. Status code: {resp.status_code}\nData\n:{resp.text}")
-
-          dongleauth = json.loads(resp.text)
-          sunnylink_dongle_id = dongleauth["device_id"]
-          if sunnylink_dongle_id:
-            self._status_update("Device registered successfully.")
-            successful_registration = True
-            break
-        except Exception as e:
-          if verbose:
-            self._status_update(f"Waiting {backoff}s before retry, Exception occurred during registration: [{str(e)}]")
-
-          if not os.path.exists(CRASH_LOG_DIR):
-            os.makedirs(CRASH_LOG_DIR)
-
-          with open(f'{CRASH_LOG_DIR}/error.txt', 'a') as f:
-            f.write(f"[{datetime.now()}] sunnylink: {str(e)}\n")
-
-          backoff = min(backoff * 2 * (0.5 + random.random()), 60)
-          time.sleep(backoff)
-
-        if time.monotonic() - start_time > timeout:
-          self._status_update(f"Giving up on sunnylink's registration after {timeout}s. Will retry on next boot.")
-          time.sleep(3)
+          # Fetch pairing code
+          self._fetch_pairing_code(sunnylink_dongle_id)
           break
+        else:
+          raise Exception(f"Registration failed: {resp.status_code} {resp.text[:200]}")
 
-    self.params.put("SunnylinkDongleId", sunnylink_dongle_id or UNREGISTERED_SUNNYLINK_DONGLE_ID)
+      except Exception as e:
+        if verbose:
+          self._status_update(f"Retry in {backoff}s: {e}")
+        backoff = min(backoff * 2, 60)
+        time.sleep(backoff)
 
-    # Set the last ping time to the current time since we were just talking to the API
-    last_ping = int((time.monotonic() if successful_registration else start_time) * 1e9)
-    Params().put("LastSunnylinkPingTime", last_ping)
+      if time.monotonic() - start_time > timeout:
+        self._status_update(f"Giving up after {timeout}s")
+        break
 
-    # Disable sunnylink if registration was not successful
-    if not successful_registration:
-      Params().put_bool("SunnylinkEnabled", False)
+    self.params.put("DongleId", sunnylink_dongle_id or UNREGISTERED_SUNNYLINK_DONGLE_ID)
+    self.params.put("LastSunnylinkPingTime", int(time.monotonic() * 1e9))
 
     self.spinner = None
     return sunnylink_dongle_id
+
+  def _fetch_pairing_code(self, device_id):
+    """Fetch a pairing code from DashBox server."""
+    try:
+      token = self.params.get("SunnylinkToken")
+      if not token:
+        self._status_update("No DashBox token, skipping")
+        return
+      resp = self._dash_post(f"devices/{device_id}/pair", {}, token=token)
+      if resp.status_code == 200:
+        data = resp.json()
+        code = data.get("pairing_code", "")
+        if code:
+          self.params.put("SunnylinkPairingCode", code)
+          self._status_update(f"Pairing code: {code}")
+      else:
+        self._status_update(f"Pairing failed: {resp.status_code} {resp.text[:100]}")
+    except Exception as e:
+      self._status_update(f"Failed to fetch pairing code: {e}")

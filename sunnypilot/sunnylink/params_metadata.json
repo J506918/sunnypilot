@@ -1259,6 +1259,10 @@
     "title": "sunnylink Dongle ID",
     "description": ""
   },
+  "SunnylinkPairingCode": {
+    "title": "DashBox Pairing Code",
+    "description": "6-digit code for pairing device with mobile app"
+  },
   "SunnylinkEnabled": {
     "title": "sunnylink Enabled",
     "description": ""
