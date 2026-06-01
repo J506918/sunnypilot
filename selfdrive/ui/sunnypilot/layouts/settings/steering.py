@@ -96,6 +96,22 @@ class SteeringLayout(Widget):
       title=lambda: tr("Neural Network Lateral Control (NNLC)"),
       description=""
     )
+    
+    # NEW: Adaptive Steer Damping Control
+    self._adaptive_steer_damping_toggle = toggle_item_sp(
+      param="AdaptiveSteerDamping",
+      title=lambda: tr("Adaptive Steer Damping"),
+      description=lambda: tr("Dynamically adjusts steering damping based on road conditions and vehicle speed for smoother lane keeping.")
+    )
+    self._adaptive_damping_strength = option_item_sp(
+      param="AdaptiveDampingStrength",
+      title=lambda: tr("Damping Strength"),
+      min_value=0,
+      max_value=100,
+      value_change_step=5,
+      description=lambda: tr("Controls how aggressively the steering damping is applied."),
+      label_callback=lambda strength: f'{strength}%'
+    )
 
     items = [
       self._mads_toggle,
@@ -111,6 +127,9 @@ class SteeringLayout(Widget):
       self._torque_customization_button,
       LineSeparatorSP(40),
       self._nnlc_toggle,
+      LineSeparatorSP(40),
+      self._adaptive_steer_damping_toggle,
+      self._adaptive_damping_strength,
     ]
     return items
 
@@ -137,6 +156,11 @@ class SteeringLayout(Widget):
     self._nnlc_toggle.action_item.set_enabled(ui_state.is_offroad() and torque_allowed and not enforce_torque_enabled)
     self._torque_control_toggle.action_item.set_enabled(ui_state.is_offroad() and torque_allowed and not nnlc_enabled)
     self._torque_customization_button.action_item.set_enabled(self._torque_control_toggle.action_item.get_state())
+    
+    # Update Adaptive Steer Damping visibility
+    adaptive_damping_enabled = self._adaptive_steer_damping_toggle.action_item.get_state()
+    self._adaptive_steer_damping_toggle.action_item.set_enabled(ui_state.is_offroad())
+    self._adaptive_damping_strength.set_visible(adaptive_damping_enabled)
 
   def _render(self, rect):
     if self._current_panel == PanelType.LANE_CHANGE:
