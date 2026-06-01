@@ -1,4 +1,5 @@
 from cereal import log
+import socket
 from openpilot.common.params import Params, UnknownKeyName
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.list_view import multiple_button_item, toggle_item
@@ -242,6 +243,13 @@ class TogglesLayout(Widget):
       return
 
     self._params.put_bool(param, state)
+    # Push to dashboxd so App gets real-time update
+    try:
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+        sock.sendto(f"{param}={int(state)}".encode(), "/tmp/dashbox_notify.sock")
+        sock.close()
+    except Exception:
+        pass
     if self._toggle_defs[param][3]:
       self._params.put_bool("OnroadCycleRequested", True)
 
