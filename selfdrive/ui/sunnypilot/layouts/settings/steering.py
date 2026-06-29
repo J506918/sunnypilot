@@ -85,6 +85,13 @@ class SteeringLayout(Widget):
       param="EnforceTorqueControl",
       title=lambda: tr("Enforce Torque Lateral Control"),
       description=lambda: tr("Enable this to enforce sunnypilot to steer with Torque lateral control."),
+      callback=self._on_torque_control_toggled,
+    )
+    self._human_like_toggle = toggle_item_sp(
+      param="LateralControlHumanLike",
+      title=lambda: tr("Human-like Lateral Control (Preview + Yaw Loop)"),
+      description=lambda: tr("Uses preview-based feedforward, a yaw-rate inner loop, and smooth low-speed torque shaping for stable straight tracking, natural turn-in, and smooth corner exit."),
+      callback=self._on_human_like_toggled,
     )
     self._torque_customization_button = simple_button_item_sp(
       button_text=lambda: tr("Customize Torque Params"),
@@ -94,7 +101,8 @@ class SteeringLayout(Widget):
     self._nnlc_toggle = toggle_item_sp(
       param="NeuralNetworkLateralControl",
       title=lambda: tr("Neural Network Lateral Control (NNLC)"),
-      description=""
+      description="",
+      callback=self._on_nnlc_toggled,
     )
 
     items = [
@@ -108,11 +116,29 @@ class SteeringLayout(Widget):
       self._blinker_reengage_delay,
       LineSeparatorSP(40),
       self._torque_control_toggle,
+      self._human_like_toggle,
       self._torque_customization_button,
       LineSeparatorSP(40),
       self._nnlc_toggle,
     ]
     return items
+
+  @staticmethod
+  def _clear_lateral_mode_params(*keys: str):
+    for key in keys:
+      ui_state.params.remove(key)
+
+  def _on_torque_control_toggled(self, enabled: bool):
+    if enabled:
+      self._clear_lateral_mode_params("LateralControlHumanLike", "NeuralNetworkLateralControl")
+
+  def _on_human_like_toggled(self, enabled: bool):
+    if enabled:
+      self._clear_lateral_mode_params("EnforceTorqueControl", "NeuralNetworkLateralControl")
+
+  def _on_nnlc_toggled(self, enabled: bool):
+    if enabled:
+      self._clear_lateral_mode_params("EnforceTorqueControl", "LateralControlHumanLike")
 
   def _set_current_panel(self, panel: PanelType):
     self._current_panel = panel
@@ -133,10 +159,12 @@ class SteeringLayout(Widget):
     self._blinker_reengage_delay.set_visible(self._blinker_control_toggle.action_item.get_state())
 
     enforce_torque_enabled = self._torque_control_toggle.action_item.get_state()
+    human_like_enabled = self._human_like_toggle.action_item.get_state()
     nnlc_enabled = self._nnlc_toggle.action_item.get_state()
-    self._nnlc_toggle.action_item.set_enabled(ui_state.is_offroad() and torque_allowed and not enforce_torque_enabled)
-    self._torque_control_toggle.action_item.set_enabled(ui_state.is_offroad() and torque_allowed and not nnlc_enabled)
-    self._torque_customization_button.action_item.set_enabled(self._torque_control_toggle.action_item.get_state())
+    self._nnlc_toggle.action_item.set_enabled(ui_state.is_offroad() and torque_allowed and not enforce_torque_enabled and not human_like_enabled)
+    self._human_like_toggle.action_item.set_enabled(ui_state.is_offroad() and torque_allowed and not enforce_torque_enabled and not nnlc_enabled)
+    self._torque_control_toggle.action_item.set_enabled(ui_state.is_offroad() and torque_allowed and not human_like_enabled and not nnlc_enabled)
+    self._torque_customization_button.action_item.set_enabled(enforce_torque_enabled or human_like_enabled)
 
   def _render(self, rect):
     if self._current_panel == PanelType.LANE_CHANGE:

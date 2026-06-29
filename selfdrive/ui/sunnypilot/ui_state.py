@@ -164,6 +164,7 @@ class UIStateSP:
     if CP is not None:
       # Angle steering: no torque-based lateral controls
       if CP.steerControlType == car.CarParams.SteerControlType.angle:
+        self.params.remove("LateralControlHumanLike")
         self.params.remove("EnforceTorqueControl")
         self.params.remove("NeuralNetworkLateralControl")
 
@@ -176,6 +177,7 @@ class UIStateSP:
         self.params.remove("AutoLaneChangeBsmDelay")
     else:
       # No CarParams: clear all car-dependent params as safety default
+      self.params.remove("LateralControlHumanLike")
       self.params.remove("EnforceTorqueControl")
       self.params.remove("NeuralNetworkLateralControl")
       self.params.remove("AlphaLongitudinalEnabled")

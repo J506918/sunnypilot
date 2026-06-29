@@ -588,6 +588,10 @@
     "title": "Last Update Uptime Onroad",
     "description": ""
   },
+  "LateralControlHumanLike": {
+    "title": "Human-like Lateral Control",
+    "description": "Uses preview-based feedforward, a yaw-rate inner loop, and smooth low-speed torque shaping for stable straight tracking, natural turn-in, and smooth corner exit."
+  },
   "LateralManeuverMode": {
     "title": "Lateral Maneuver Mode",
     "description": ""
