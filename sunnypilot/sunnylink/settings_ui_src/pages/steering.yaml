@@ -118,6 +118,30 @@ sections:
     - type: param
       key: NeuralNetworkLateralControl
       equals: false
+    - type: param
+      key: LateralControlHumanLike
+      equals: false
+  - key: LateralControlHumanLike
+    widget: toggle
+    title: Human-like Lateral Control (Preview + Yaw Loop)
+    description: Uses preview-based feedforward, a yaw-rate inner loop, and smooth low-speed torque shaping for stable straight tracking, natural turn-in, and smooth corner exit.
+    visibility:
+    - type: not
+      condition:
+        type: capability
+        field: steer_control_type
+        equals: angle
+    enablement:
+    - $ref: '#/macros/offroad'
+    - type: capability
+      field: torque_allowed
+      equals: true
+    - type: param
+      key: EnforceTorqueControl
+      equals: false
+    - type: param
+      key: NeuralNetworkLateralControl
+      equals: false
   sub_panels:
   - id: torque_settings
     label: Torque Settings

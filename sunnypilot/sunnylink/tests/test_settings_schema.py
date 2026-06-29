@@ -272,6 +272,35 @@ class TestKnownPanels:
     nnlc_enable_keys = {r.get("key") for r in nnlc.get("enablement", []) if r.get("type") == "param"}
     assert "EnforceTorqueControl" in nnlc_enable_keys
 
+  def test_humanlike_lateral_control_mutual_exclusion(self, schema):
+    humanlike = None
+    torque_items = []
+    nnlc_items = []
+
+    for panel in schema["panels"]:
+      for item in _iter_panel_items(panel):
+        if item["key"] == "LateralControlHumanLike":
+          humanlike = item
+        elif item["key"] == "EnforceTorqueControl":
+          torque_items.append(item)
+        elif item["key"] == "NeuralNetworkLateralControl":
+          nnlc_items.append(item)
+
+    assert humanlike is not None, "LateralControlHumanLike item missing"
+    humanlike_enable_keys = {r.get("key") for r in humanlike.get("enablement", []) if r.get("type") == "param"}
+    assert "EnforceTorqueControl" in humanlike_enable_keys
+    assert "NeuralNetworkLateralControl" in humanlike_enable_keys
+
+    assert torque_items, "EnforceTorqueControl item missing"
+    for item in torque_items:
+      torque_enable_keys = {r.get("key") for r in item.get("enablement", []) if r.get("type") == "param"}
+      assert "LateralControlHumanLike" in torque_enable_keys
+
+    assert nnlc_items, "NeuralNetworkLateralControl item missing"
+    for item in nnlc_items:
+      nnlc_enable_keys = {r.get("key") for r in item.get("enablement", []) if r.get("type") == "param"}
+      assert "LateralControlHumanLike" in nnlc_enable_keys
+
 
 class TestKnownVehicleSettings:
   def test_hyundai_has_longitudinal_tuning(self, schema):

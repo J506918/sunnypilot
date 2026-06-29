@@ -35,6 +35,16 @@ def _enforce_torque_lateral_control(CP: structs.CarParams, params: Params = None
   return enabled
 
 
+def _initialize_human_like_lateral_control(CP: structs.CarParams, params: Params = None, enabled: bool = False) -> bool:
+  if params is None:
+    params = Params()
+
+  if CP.steerControlType != structs.CarParams.SteerControlType.angle:
+    enabled = params.get_bool("LateralControlHumanLike")
+
+  return enabled
+
+
 def _initialize_neural_network_lateral_control(CP: structs.CarParams, CP_SP: structs.CarParamsSP,
                                                params: Params = None, enabled: bool = False) -> bool:
   if params is None:
@@ -64,8 +74,9 @@ def _initialize_intelligent_cruise_button_management(CP: structs.CarParams, CP_S
     CP_SP.pcmCruiseSpeed = False
 
 
-def _initialize_torque_lateral_control(CI: CarInterfaceBase, CP: structs.CarParams, enforce_torque: bool, nnlc_enabled: bool) -> None:
-  if nnlc_enabled or enforce_torque:
+def _initialize_torque_lateral_control(CI: CarInterfaceBase, CP: structs.CarParams,
+                                       enforce_torque: bool, human_like_enabled: bool, nnlc_enabled: bool) -> None:
+  if nnlc_enabled or human_like_enabled or enforce_torque:
     CI.configure_torque_tune(CP.carFingerprint, CP.lateralTuning)
 
 
@@ -75,6 +86,7 @@ def _cleanup_unsupported_params(CP: structs.CarParams, CP_SP: structs.CarParamsS
 
   if CP.steerControlType == structs.CarParams.SteerControlType.angle:
     cloudlog.warning("SteerControlType is angle, cleaning up params")
+    params.remove("LateralControlHumanLike")
     params.remove("NeuralNetworkLateralControl")
     params.remove("EnforceTorqueControl")
 
@@ -97,9 +109,10 @@ def setup_interfaces(CI: CarInterfaceBase, params: Params = None) -> None:
   CP_SP = CI.CP_SP
 
   enforce_torque = _enforce_torque_lateral_control(CP, params)
+  human_like_enabled = _initialize_human_like_lateral_control(CP, params)
   nnlc_enabled = _initialize_neural_network_lateral_control(CP, CP_SP, params)
   _initialize_intelligent_cruise_button_management(CP, CP_SP, params)
-  _initialize_torque_lateral_control(CI, CP, enforce_torque, nnlc_enabled)
+  _initialize_torque_lateral_control(CI, CP, enforce_torque, human_like_enabled, nnlc_enabled)
   _cleanup_unsupported_params(CP, CP_SP)
 
   try:
