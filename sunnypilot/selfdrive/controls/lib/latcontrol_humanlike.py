@@ -43,6 +43,9 @@ LOW_SPEED_AUTHORITY = [1.85, 1.60, 1.25, 1.00]
 RATE_LIMIT = [0.12, 0.09, 0.055, 0.030]
 
 LP_FILTER_CUTOFF_HZ = 5.0
+MIN_LAT_DELAY = 0.01
+MIN_INTEGRATOR_SPEED = 0.3
+SATURATION_EPS = 1e-3
 
 
 class HumanLikeTorqueParamsOverride:
@@ -89,7 +92,7 @@ class HumanLikePreview:
     self.model_valid = has_orientation_rate or has_lat_accel
 
   def update_lateral_lag(self, lag):
-    self.lat_delay = max(0.01, float(lag))
+    self.lat_delay = max(MIN_LAT_DELAY, float(lag))
 
   def update_limits(self):
     pass
@@ -181,7 +184,8 @@ class LatControlHumanLike(LatControl):
 
     preview_curvature, near_curvature, far_curvature = self.extension.preview_curvature(CS.vEgo, desired_curvature)
     desired_yaw_rate_ff = preview_curvature * CS.vEgo
-    desired_lateral_jerk = ((far_curvature - near_curvature) * CS.vEgo ** 2) / max(self.extension.far_preview_time - self.extension.near_preview_time, self.dt)
+    preview_time_delta = max(self.extension.far_preview_time - self.extension.near_preview_time, self.dt)
+    desired_lateral_jerk = ((far_curvature - near_curvature) * CS.vEgo ** 2) / preview_time_delta
 
     roll_compensation = params.roll * ACCELERATION_DUE_TO_GRAVITY
     curvature_deadzone = abs(VM.calc_curvature(math.radians(self.steering_angle_deadzone_deg), CS.vEgo, 0.0))
@@ -192,7 +196,7 @@ class LatControlHumanLike(LatControl):
       output_torque = 0.0
       pid_log.active = False
     else:
-      freeze_integrator = steer_limited_by_safety or CS.steeringPressed or CS.vEgo < 0.3
+      freeze_integrator = steer_limited_by_safety or CS.steeringPressed or CS.vEgo < MIN_INTEGRATOR_SPEED
       path_tracking_yaw_error = (desired_curvature - measured_curvature) * CS.vEgo
 
       outer_limit = float(np.interp(CS.vEgo, PREVIEW_SPEED_BP, OUTER_LIMIT))
@@ -250,6 +254,6 @@ class LatControlHumanLike(LatControl):
       pid_log.actualLateralAccel = float(actual_lateral_accel)
       pid_log.desiredLateralAccel = float(desired_lateral_accel)
       pid_log.desiredLateralJerk = float(desired_lateral_jerk)
-      pid_log.saturated = bool(self._check_saturation(self.steer_max - abs(output_torque) < 1e-3, CS, steer_limited_by_safety, curvature_limited))
+      pid_log.saturated = bool(self._check_saturation(self.steer_max - abs(output_torque) < SATURATION_EPS, CS, steer_limited_by_safety, curvature_limited))
 
     return -output_torque, 0.0, pid_log
