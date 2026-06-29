@@ -36,10 +36,10 @@ class ControlsExt(ModelStateBase):
     self.pm_services_ext = ['carControlSP']
 
   def initialize_lateral_control(self, lac, CI, dt):
-    human_like_lateral_control = self.params.get_bool("LateralControlHumanLike")
+    human_like_enabled = self.params.get_bool("LateralControlHumanLike")
     enforce_torque_control = self.params.get_bool("EnforceTorqueControl")
     torque_versions = self.params.get("TorqueControlTune")
-    if self.CP.lateralTuning.which() == 'torque' and human_like_lateral_control:
+    if self.CP.lateralTuning.which() == 'torque' and human_like_enabled:
       return LatControlHumanLike(self.CP, self.CP_SP, CI, dt)
 
     if not enforce_torque_control:

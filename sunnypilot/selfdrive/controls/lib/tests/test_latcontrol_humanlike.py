@@ -8,6 +8,10 @@ from types import SimpleNamespace
 
 from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_humanlike import LatControlHumanLike
 
+LOW_SPEED_MPS = 4.0
+HIGH_SPEED_MPS = 20.0
+MAX_ZERO_CROSSING_DELTA = 0.3
+
 
 class TorqueParams:
   def __init__(self):
@@ -89,12 +93,14 @@ class TestLatControlHumanLike:
     high_speed_output = 0.0
 
     for _ in range(20):
-      low_speed_output, _, _ = controller.update(True, build_car_state(4.0), vm, params, False, desired_lateral_accel / (4.0 ** 2), None, False, 0.2)
+      low_speed_output, _, _ = controller.update(True, build_car_state(LOW_SPEED_MPS), vm, params, False,
+                                                 desired_lateral_accel / (LOW_SPEED_MPS ** 2), None, False, 0.2)
 
     controller.reset()
 
     for _ in range(20):
-      high_speed_output, _, _ = controller.update(True, build_car_state(20.0), vm, params, False, desired_lateral_accel / (20.0 ** 2), None, False, 0.2)
+      high_speed_output, _, _ = controller.update(True, build_car_state(HIGH_SPEED_MPS), vm, params, False,
+                                                  desired_lateral_accel / (HIGH_SPEED_MPS ** 2), None, False, 0.2)
 
     assert abs(low_speed_output) > abs(high_speed_output)
 
@@ -107,7 +113,7 @@ class TestLatControlHumanLike:
     first_output, _, _ = controller.update(True, cs, vm, params, False, 0.003, None, False, 0.2)
     second_output, _, _ = controller.update(True, cs, vm, params, False, -0.003, None, False, 0.2)
 
-    assert abs(second_output - first_output) < 0.3
+    assert abs(second_output - first_output) < MAX_ZERO_CROSSING_DELTA
 
   def test_preview_model_can_bias_turn_in(self):
     controller = build_controller()
